@@ -1,5 +1,7 @@
 # Package evidence and clean up the lab
 
+**Choose your interface:** the CLI steps are below. For click-by-click instructions, use the [AWS Console / GUI path](console.md).
+
 **Environment:** Laptop and Runner. **Prerequisite:** cutover and incident exercises complete, or an explicit decision to abandon this disposable run.
 
 ## 1. Write the handover report

@@ -1,5 +1,7 @@
 # Assess with SCT and prepare the target
 
+**Choose your interface:** the CLI steps are below. For click-by-click instructions, use the [AWS Console / GUI path](console.md).
+
 **Environment:** Runner for schema inspection; Laptop for SCT. **Prerequisite:** both native schemas initialized, target Hydra stopped.
 
 ## 1. Capture the actual schema inventory

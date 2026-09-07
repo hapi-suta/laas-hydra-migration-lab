@@ -1,5 +1,7 @@
 # Set up the incident practice session
 
+**Choose your interface:** the CLI steps are below. For click-by-click instructions, use the [AWS Console / GUI path](console.md).
+
 **Environment:** dedicated local or cloud lab. **Prerequisite:** normal behavior verified and a reset plan available.
 
 ## 1. Record your healthy baseline

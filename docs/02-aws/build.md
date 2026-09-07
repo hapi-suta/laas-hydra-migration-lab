@@ -1,5 +1,7 @@
 # Provision the Aurora practice environment
 
+**Choose your interface:** the CLI steps are below. For click-by-click instructions, use the [AWS Console / GUI path](console.md).
+
 **Environment:** Laptop with sandbox AWS credentials, then Runner as ec2-user. **Checkpoint:** both Aurora writers available, SSM runner online, DMS instance available.
 
 ## 1. Select the sandbox account

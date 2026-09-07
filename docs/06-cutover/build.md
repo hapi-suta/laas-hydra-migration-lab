@@ -1,5 +1,7 @@
 # Reconcile and perform the cutover
 
+**Choose your interface:** the CLI steps are below. For click-by-click instructions, use the [AWS Console / GUI path](console.md).
+
 **Environment:** Runner plus Laptop DMS operator terminal. **Prerequisite:** full load complete and CDC healthy.
 
 ## 1. Prepare continuity evidence

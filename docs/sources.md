@@ -35,7 +35,7 @@ Read the `VALIDATION.md` included in the downloadable project for actual executi
 ## Delivery model
 
 The guide follows the module navigation and instructional style of the [Kayci training portal](https://hapi-suta.github.io/laas-kayci-devops-dba/). Every module includes Concepts, Build, Use, and Survive. This customer's purpose is migration practice, so interview preparation is not part of this track.
-# Implementation research
+## Implementation research
 
 Read the [dated research and decision log](research.md) for the source-to-design
 mapping, pinned cloud versions, SCT CLI workflow, and evidence limits.

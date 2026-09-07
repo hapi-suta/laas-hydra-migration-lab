@@ -34,6 +34,10 @@ def main():
                     raise ValueError('Missing phase: ' + str(page))
                 selected = ' aria-current="page"' if page == p else ''
                 nav += f'<a{selected} href="{prefix}{folder}/{phase}.html"><span>{phase.upper()}</span>{html.escape(titles[page])}</a>'
+            console = DOCS / folder / 'console.md'
+            if console.exists():
+                selected = ' class="active" aria-current="page"' if p == console else ''
+                nav += f'<a{selected} href="{prefix}{folder}/console.html"><span>CONSOLE</span>{html.escape(titles[console])}</a>'
             nav += '</details>'
         nav += f'<a class="home" href="{prefix}sources.html">Sources & assumptions</a>'
         body = markdown.markdown(p.read_text(), extensions=['fenced_code', 'tables', 'toc', 'md_in_html'])

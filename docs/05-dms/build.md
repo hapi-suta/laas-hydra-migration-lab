@@ -1,5 +1,7 @@
 # Configure and run the DMS task
 
+**Choose your interface:** the CLI steps are below. For click-by-click instructions, use the [AWS Console / GUI path](console.md).
+
 **Environment:** Runner for database grants; Laptop with sandbox AWS credentials for DMS control. **Prerequisite:** reviewed mappings, compatible schema, passing LOB and empty-target checks.
 
 ## 1. Establish migration permissions

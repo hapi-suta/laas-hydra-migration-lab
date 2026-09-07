@@ -55,6 +55,9 @@ def main():
         cert.parent.mkdir(parents=True, exist_ok=True)
         if not cert.exists():
             cert.write_bytes(urlopen('https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem', timeout=30).read())
+        # Public CA material is mounted into Hydra, which runs as a different UID.
+        cert.parent.chmod(0o755)
+        cert.chmod(0o644)
         admins = {name: json.loads(sm.get_secret_value(SecretId=cfg[name]['master_secret_arn'])['SecretString']) for name in ('source', 'target')}
         source = pymysql.connect(host=cfg['source']['host'], user=admins['source']['username'], password=admins['source']['password'], database='hydra', ssl={'ca': str(cert.resolve()), 'check_hostname': True}, autocommit=True)
         target = psycopg.connect(host=cfg['target']['host'], user=admins['target']['username'], password=admins['target']['password'], dbname='hydra', sslmode='verify-full', sslrootcert=str(cert.resolve()), autocommit=True)
@@ -110,10 +113,10 @@ def main():
         source.close()
         target.close()
     elif a.action == 'endpoints':
-        cert = Path('runtime/certs/global-bundle.pem')
+        cert = Path('runtime/certs/' + a.region + '-bundle.pem')
         if not cert.exists():
             cert.parent.mkdir(parents=True, exist_ok=True)
-            cert.write_bytes(urlopen('https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem', timeout=30).read())
+            cert.write_bytes(urlopen(f'https://truststore.pki.rds.amazonaws.com/{a.region}/{a.region}-bundle.pem', timeout=30).read())
         cert_id = cfg['name'] + '-rds-ca'
         existing = dms.describe_certificates(Filters=[{'Name': 'certificate-id', 'Values': [cert_id]}])['Certificates']
         certificate_arn = existing[0]['CertificateArn'] if existing else dms.import_certificate(CertificateIdentifier=cert_id, CertificatePem=cert.read_text())['Certificate']['CertificateArn']

@@ -1,5 +1,7 @@
 # Load the source and generate CDC traffic
 
+**Choose your interface:** the CLI steps are below. For click-by-click instructions, use the [AWS Console / GUI path](console.md).
+
 **Environment:** Runner, ec2-user. **Prerequisite:** source portal registration completed. **Checkpoint:** measured data size and zero-error API workload.
 
 ## 1. Test a small profile
