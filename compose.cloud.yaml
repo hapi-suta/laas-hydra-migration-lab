@@ -3,7 +3,7 @@ services:
   migrate-source:
     image: oryd/hydra:v2.2.0
     environment:
-      DSN: mysql://hydra:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:3306)/hydra?tls=true&parseTime=true
+      DSN: mysql://hydra:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:3306)/hydra?tls=true&parseTime=true&foreign_key_checks=0
       SSL_CERT_FILE: /certs/global-bundle.pem
     volumes: [./runtime/certs:/certs:ro]
     command: [migrate, sql, -e, --yes]

@@ -5,14 +5,15 @@ successful static check does not prove an Aurora migration.
 
 | Gate | Status |
 |---|---|
-| Customer site and downloadable bundle | Built; local browser layout verified; publication pending |
-| Python and Terraform checks | 11 tests pass; Terraform init/validate and create-only cloud plan pass |
+| Customer site and downloadable bundle | Published on GitHub Pages; 43 pages; local browser layout verified |
+| Python and Terraform checks | 12 tests pass; Terraform init/validate and create-only cloud plan pass |
 | Local Hydra login/consent/token flows | Real login and refresh probe pass; browser login/consent passes |
-| Local snapshot migration and token continuity | Live validation pending |
+| Local snapshot migration and token continuity | All 14 table counts/hashes pass; 28 foreign keys have zero orphans; retained refresh and new login pass |
 | Aurora infrastructure apply | Applied: both Aurora writers and private DMS instance available |
-| SCT assessment and comparison | Pending live Aurora environment |
-| DMS full load + CDC | Pending live Aurora environment |
-| 35 GiB full-scale run | Pending live Aurora environment |
+| Cloud Hydra login and refresh | Pass against Aurora MySQL after migration-session correction |
+| SCT assessment and comparison | CLI build 677 starts on Corretto 17; assessment pending |
+| DMS full load + CDC | Pending execution |
+| 35 GiB full-scale run | Pending execution |
 | Customer-version compatibility | Customer release not yet supplied |
 
 The website is a practice guide. Cloud steps remain rehearsal candidates until
