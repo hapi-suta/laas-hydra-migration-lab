@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars. Supply the actual sandbox account and available versions.
+expected_account_id      = "REPLACE_WITH_SANDBOX_ACCOUNT_ID"
+region                   = "us-east-1"
+name                     = "hydra-practice"
+mysql_engine_version     = "REPLACE_FROM_AWS_ENGINE_LIST"
+postgres_engine_version  = "REPLACE_FROM_AWS_ENGINE_LIST"
+dms_engine_version       = "3.5.4"
+create_dms_service_roles  = true
+add_readers              = false
+deletion_protection      = true

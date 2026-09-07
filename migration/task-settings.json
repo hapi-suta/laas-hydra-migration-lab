@@ -1,0 +1,36 @@
+{
+  "TargetMetadata": {
+    "SupportLobs": true,
+    "FullLobMode": false,
+    "LimitedSizeLobMode": true,
+    "LobMaxSize": 64,
+    "BatchApplyEnabled": false
+  },
+  "FullLoadSettings": {
+    "TargetTablePrepMode": "DO_NOTHING",
+    "CreatePkAfterFullLoad": false,
+    "MaxFullLoadSubTasks": 4,
+    "TransactionConsistencyTimeout": 600,
+    "CommitRate": 1000
+  },
+  "ChangeProcessingDdlHandlingPolicy": {
+    "HandleSourceTableDropped": false,
+    "HandleSourceTableTruncated": false,
+    "HandleSourceTableAltered": false
+  },
+  "ValidationSettings": {
+    "EnableValidation": true,
+    "ValidationMode": "ROW_LEVEL",
+    "ThreadCount": 4
+  },
+  "Logging": {"EnableLogging": true},
+  "ControlTablesSettings": {"ControlSchema": "awsdms_control"},
+  "ErrorBehavior": {
+    "DataErrorPolicy": "STOP_TASK",
+    "DataTruncationErrorPolicy": "STOP_TASK",
+    "TableErrorPolicy": "STOP_TASK",
+    "ApplyErrorDeletePolicy": "STOP_TASK",
+    "ApplyErrorInsertPolicy": "STOP_TASK",
+    "ApplyErrorUpdatePolicy": "STOP_TASK"
+  }
+}

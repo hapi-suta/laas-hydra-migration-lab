@@ -1,0 +1,13 @@
+.env
+runtime/
+evidence/
+site/
+.venv/
+__pycache__/
+*.pyc
+.terraform/
+*.tfstate*
+*.tfplan
+terraform.tfvars
+*.auto.tfvars
+.DS_Store
