@@ -8,7 +8,7 @@ The source VPC also contains an EC2 lab runner. Its public subnet provides outbo
 
 Security groups limit database ingress to the runner and DMS groups. Native Aurora endpoints preserve TLS hostname verification. An NLB or a Route 53 alias is unnecessary for this direct peering topology.
 
-Secrets Manager holds AWS-managed administrator credentials. The bootstrap script retrieves those on the runner to establish lab-scoped Hydra and DMS database users. DMS uses its own Secrets Manager role and reaches the service through a target-VPC interface endpoint.
+Secrets Manager holds AWS-managed administrator credentials. You retrieve those credentials privately and execute the documented SQL to create separate Hydra, SCT and DMS users. DMS uses its own Secrets Manager role and reaches the service through a target-VPC interface endpoint.
 
 The resources incur ongoing charges while running. Budgets alert; they do not automatically shut down this stack. Track the owner, expected duration, deletion protection, final snapshots, and cleanup procedure from day one.
 

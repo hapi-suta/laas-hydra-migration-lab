@@ -8,4 +8,4 @@ Distinguish three outcomes: source application demonstrated, local migration aut
 
 Resetting the environment is a taught operation. The target database cannot simply be reused with `DO_NOTHING` after it has accepted application writes. Start the next cohort from known snapshots or a fresh lab name and repeat schema preparation, inventory, full load, and validation.
 
-Teardown must account for resources created outside Terraform: DMS tasks, endpoints, and imported certificates. Retained database snapshots and Secrets Manager recovery windows continue to exist after infrastructure deletion. Document those retention decisions rather than force-deleting them to obtain a clean resource list.
+Teardown must account for every resource you created: DMS tasks, endpoints, and imported certificates. Retained database snapshots and Secrets Manager recovery windows continue to exist after infrastructure deletion. Document those retention decisions rather than force-deleting them to obtain a clean resource list.

@@ -1,9 +1,13 @@
-# Catch a missing table before migration
+# Catch a missing table or unsupported conversion
 
-The instructor provides a copy of the inventory with one required relationship table removed. Do not alter the actual source schema.
+Make a copy of your proposed table-mapping JSON in a local editor. Remove the
+`networks` selection from that copy, without applying it to DMS. Compare the
+remaining selection with the source inventory and target foreign keys. Identify
+which relationships would break even if all selected rows copied successfully.
 
-Compare the proposed selection with source foreign keys and the original inventory. Identify what application behavior could fail even if all selected tables loaded successfully.
+Restore the missing selection. Recheck the [14-table inventory and LOB scan](schema-checks.md)
+before creating the real task. Review SCT's JSON and timestamp action items using
+actual native target definitions. Keep unresolved errors visible in your worksheet.
 
-Restore the missing table to the selection, regenerate mappings, and rerun the empty-target/LOB checks as appropriate. Explain why row counts for a selected subset can look perfect while the application is broken.
-
-**Success:** all required parent/child relationships are accounted for and the reviewer can trace the selected tables back to the actual source inventory.
+**Gate:** detect the incomplete selection before execution and explain why a high
+conversion percentage or matching subset counts cannot prove application integrity.

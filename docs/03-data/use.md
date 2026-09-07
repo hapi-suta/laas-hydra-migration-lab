@@ -1,21 +1,13 @@
-# Explore your dataset
+# Prove your restored source works
 
-1. Compare logical payload bytes, table/index allocation, and Aurora cluster storage. Explain why they differ.
-2. Stop the scale process between batches, rerun, and confirm generated IDs remain unique and the final size meets the goal.
-3. Compare the data produced by client-credentials traffic with the data produced by browser authorization-code login.
-4. Increase workload concurrency modestly, then compare requested rate, successful operations, database CPU, and errors.
-5. Identify which tables contain references to the network ID. Explain why changing every `nid` randomly would break this demo.
+1. Save the restore manifest and compare exact client counts and byte totals using
+   [the source SQL checks](build.md#4-verify-the-restore-before-starting-hydra).
+2. Open your portal tunnel and perform [Alice and Bob login, refresh and revocation](build.md#6-create-actual-oauth-state-through-the-browser).
+3. Run source token-table counts before and after those actions. Record counts
+   without recording token values.
+4. In RDS Monitoring, record CPU, connections and storage I/O during the restore
+   and during interactive application use. Explain the difference.
 
-<details markdown="1"><summary>Hint: use inventory as evidence</summary>
-
-On **Runner**, as **ec2-user**:
-
-```bash
-.venv/bin/python scripts/inventory.py
-```
-
-Inspect exact counts and columns in `evidence/inventory.json`. Do not assume every required table starts with `hydra_`.
-
-</details>
-
-**Gate:** describe the dataset's limitations honestly and show the final measured size. Do not call random metadata “production data.”
+**Gate:** the student restored the data, the manifest matches, and the application
+reads and writes the restored database. A download or Available cluster is not
+completion evidence.

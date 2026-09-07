@@ -78,7 +78,7 @@ column sizes and fail on truncation.
 [AWS PostgreSQL target guidance](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Target.PostgreSQL.html).
 
 DMS uses dedicated endpoint secrets rather than RDS-managed master credentials.
-The runner uses managed master secrets only for bootstrap. Endpoint roles receive
+The student retrieves managed master credentials privately and creates SQL users explicitly. Endpoint roles receive
 access to the two lab DMS secrets, and a private Secrets Manager endpoint serves
 the replication instance.
 [AWS endpoint secret authentication](https://docs.aws.amazon.com/dms/latest/userguide/security_iam_secretsmanager.html).
@@ -93,8 +93,7 @@ client changes. It is not a measured production distribution. Capture table coun
 LOB sizes, load duration, CDC latency and database/DMS resource pressure.
 [AWS DMS best practices](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_BestPractices.html).
 
-At cutover, stop all source writers, prove CDC drain, reconcile counts and canonical
-row hashes, stop DMS, and then allow target application writes. Reuse the same
+At cutover, stop all source writers, prove CDC drain, compare exact counts and complete row-level validation, stop DMS, and then allow target application writes. Reuse the same
 issuer and configured cryptographic secrets. Exercise retained and new sessions.
 Once the target has accepted new writes, switching back to the old source can lose
 those writes; reverse migration is a separate procedure, not an automatic rollback.
@@ -103,7 +102,7 @@ and [monitoring](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Monitorin
 
 ## Costs and evidence limits
 
-The live AWS Pricing API returned USD 0.26/hour for each standard db.r6g.large
+On 2026-09-07, the AWS Pricing API returned USD 0.26/hour for each standard db.r6g.large
 Aurora writer in us-east-1. The two writers therefore cost USD 0.52/hour before
 DMS, the runner, storage, I/O, snapshots, IPv4 and network charges. A review-deadline
 tag does not stop billing. Use the cleanup guide and verify residual resources.

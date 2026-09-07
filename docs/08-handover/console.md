@@ -1,7 +1,7 @@
 # Inspect costs and clean up in the Console
 
 **Environment:** assigned AWS account and region. **CLI equivalent:**
-[Handover and cleanup](build.md). **Prerequisite:** instructor-approved cleanup of
+[Handover and cleanup](build.md). **Prerequisite:** your decision to clean up
 this named disposable lab, final evidence saved, customer practice no longer active.
 
 ## 1. Record what is being handed over
@@ -27,12 +27,7 @@ being retained for another practice session or permanently removed.
 
 ## 3. Choose the matching cleanup method
 
-**Terraform-created lab:** use the [CLI teardown procedure](build.md) with its
-original state. Use the Console to inspect the plan's target resources and verify
-the result. Deleting Terraform resources manually creates state drift; don't mix
-cleanup methods without reconciling state.
-
-**Console-created lab:** follow the sequence below. Reconfirm each selected
+**Student-created lab:** follow the sequence below. Reconfirm each selected
 resource's exact name, project tag and dependencies. Do not select shared DMS
 service roles or other learners' instances.
 
@@ -72,7 +67,8 @@ decision; it is not silently included in this sequence.
    subnets and route tables. Detach and delete the source internet gateway.
 4. Delete the two lab VPCs. Dependency errors identify remaining resources; inspect
    them rather than deleting every resource returned by the Console.
-5. In **IAM**, delete the lab-specific runner instance profile/role and DMS
+5. In **RDS**, delete the now-unused lab DB subnet groups and cluster parameter
+   groups. Then in **IAM**, delete the lab-specific runner instance profile/role and DMS
    secrets role when unused. Keep shared `dms-vpc-role` and
    `dms-cloudwatch-logs-role` if other migrations use them.
 6. Remove lab-only alarms/log groups according to the evidence retention policy.
@@ -85,5 +81,5 @@ deleted resources and deliberately retained resources with expiry/owner. Repeat
 the inventory: there should be no unaccounted billable resource. Review Cost
 Explorer after its next data update and resolve residual charges.
 
-**Evidence:** approved scope, deletion results, retained-snapshot/secret list,
+**Evidence:** recorded cleanup scope, deletion results, retained-snapshot/secret list,
 zero-unaccounted-resource inventory and final cost review.

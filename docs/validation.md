@@ -1,4 +1,4 @@
-# Implementation and verification record
+# What has been tested
 
 This record separates executed tests from documented procedures. It does not
 award the student's checkpoints. Updated 2026-09-07.

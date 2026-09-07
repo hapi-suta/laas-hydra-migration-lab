@@ -1,31 +1,15 @@
-# Prove normal authentication behavior
+# Explain what each component does
 
-## Exercise 1 — Two identities
+Before building, identify where each action belongs:
 
-Sign in as Alice in one browser profile and Bob in another. Compare the introspected subjects. Explain why the portal's browser cookie and Hydra's database token state are different things.
+| Action | Component |
+|---|---|
+| Create a source/target cluster | RDS Console or AWS CLI |
+| Import the supplied logical SQL | MySQL client on your runner |
+| Assess/convert schema | AWS SCT desktop or batch CLI |
+| Move existing rows and subsequent changes | AWS DMS full load and CDC |
+| Prove old refresh tokens still work | Hydra and the practice portal |
+| Verify completion and diagnose lag | SQL, DMS statistics and CloudWatch |
 
-## Exercise 2 — Token lifecycle
-
-Refresh Alice's session twice, then revoke and sign out. Attempt to reopen the protected page. Record the behavior before and after revocation without recording token strings.
-
-## Exercise 3 — Follow a request
-
-Identify which service handles the login page, consent acceptance, token exchange, and introspection. Inspect `app/nginx.conf` and `app/server.py` after making your prediction.
-
-## Exercise 4 — Restart versus reset
-
-Stop and start the gateway with Docker Compose. Explain why this should preserve database state and why deleting database volumes would not.
-
-<details markdown="1"><summary>Hint: inspect the lifecycle commands</summary>
-
-On **Laptop**, as **your user**:
-
-```bash
-python3 scripts/lab.py status
-```
-
-Compare long-running services with successful one-shot migration containers. Read `compose.yaml` to locate named database volumes.
-
-</details>
-
-**Gate:** demonstrate successful source login, refresh, and revoke. Save a short explanation of each service's role before proceeding to AWS.
+**Gate:** explain why SCT conversion, a completed full load and a successful
+application cutover are three different results.

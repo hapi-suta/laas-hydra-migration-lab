@@ -17,7 +17,7 @@ document.querySelector('#search')?.addEventListener('input', (event) => {
   });
 });
 document.querySelectorAll('pre').forEach(pre => {
-  if (!pre.querySelector('code.language-bash,code.language-sql,code.language-json')) return;
+  if (!pre.querySelector('code')) return;
   const button = document.createElement('button');
   button.className = 'copy';
   button.textContent = 'Copy';

@@ -1,53 +1,271 @@
-# Load the source and generate CDC traffic
+# Restore the MySQL source yourself
 
-**Choose your interface:** the CLI steps are below. For click-by-click instructions, use the [AWS Console / GUI path](console.md).
+**Where:** EC2 runner, Session Manager, ec2-user, `/opt/hydra-practice`.
+**Before starting:** complete [application setup](../02-aws/application.md).
+Your source `hydra` database exists but has **zero tables**. Target Hydra is stopped.
+[Console route](console.md).
 
-**Environment:** Runner, ec2-user. **Prerequisite:** source portal registration completed. **Checkpoint:** measured data size and zero-error API workload.
+This is a logical SQL restore into the Aurora MySQL cluster you created. AWS
+explains this method in [Logical migration using mysqldump](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Migrating.ExtMySQL.mysqldump.html).
+The downloadable fixture contains the pinned Hydra schema and synthetic clients.
+It is a training artifact, not a customer backup. SQL expressions expand repeated
+synthetic metadata during import. Compressed download size is not database size.
 
-## 1. Test a small profile
+## 1. Choose and download your restore fixture
 
-On **Runner**, as **ec2-user**:
+Use **small** to rehearse a restore. For the complete migration exercise choose
+**35g**, which expands to at least 35 GiB of logical client data. Do not import both
+into the same database. A small rehearsal requires a separate empty database or
+a fresh lab before the full exercise.
 
-```bash
-.venv/bin/python scripts/scale.py --gib 0.05
-```
-
-`--gib` sets the target logical client-data size in GiB. The script prints progress without exposing client credentials. Inspect `evidence/scale.json` and require `meets_goal: true`.
-
-## 2. Exercise real application operations
-
-On **Runner**, as **ec2-user**:
-
-```bash
-.venv/bin/python scripts/workload.py --seconds 120 --workers 2 --rps 4
-```
-
-`--seconds` bounds runtime; `--workers` caps concurrency; `--rps` is the total token-cycle rate, not per worker. Additional admin requests occur in some cycles. Require `errors: 0` and nonzero issued, revoked, and client lifecycle counts.
-
-Sign in as Alice and Bob through the portal to populate actual authorization-code, consent, login, and refresh state. Client-credentials traffic alone does not exercise those relationships.
-
-## 3. Build the full-size profile
-
-After the small profile passes and the AWS budget is agreed, on **Runner**, as **ec2-user**:
+On the runner:
 
 ```bash
-.venv/bin/python scripts/scale.py --gib 35 --full-scale --batch 500
+export FIXTURE=hydra-source-demo-35g
 ```
 
-`--full-scale` explicitly enables large generation. `--batch` sets rows per committed batch. Run in a durable terminal session on the runner; if interrupted, rerun to continue. Do not start a second copy concurrently.
-
-Require `measured_client_logical_bytes` of at least **37,580,963,840** and `meets_goal: true`. Save generation duration, row count, database CPU, I/O, and free storage. A smaller run is development evidence only.
-
-## 4. Keep activity running during migration
-
-In a separate **Runner** terminal, as **ec2-user**:
+For a small rehearsal use `export FIXTURE=hydra-source-demo-small` instead. Download
+the SQL, checksum and manifest from the published release:
 
 ```bash
-.venv/bin/python scripts/workload.py --seconds 3600 --workers 4 --rps 8
+mkdir -p runtime/restore
 ```
 
-This creates a one-hour bounded workload. Choose a longer duration if full load takes longer. Track errors and latency rather than assuming a requested rate is achieved.
+```bash
+curl -fL "https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/$FIXTURE.sql.gz" -o "runtime/restore/$FIXTURE.sql.gz"
+```
 
-Do not run cleanup jobs or upgrade Hydra between inventory and migration. Keep the schema stable.
+```bash
+curl -fL "https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/$FIXTURE.sha256" -o "runtime/restore/$FIXTURE.sha256"
+```
 
-**Evidence:** scale report, workload counts, a manual browser login/refresh result, elapsed time, and a note stating this is a client/metadata-heavy synthetic profile.
+```bash
+curl -fL "https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/$FIXTURE.manifest.json" -o "runtime/restore/$FIXTURE.manifest.json"
+```
+
+`-f` fails on HTTP errors; `-L` follows the release download redirect. A missing
+asset is a stop condition. Do not import an HTML error page or substitute customer data.
+
+```bash
+(cd runtime/restore && sha256sum -c "$FIXTURE.sha256")
+```
+
+```bash
+gzip -t "runtime/restore/$FIXTURE.sql.gz"
+```
+
+```bash
+cat "runtime/restore/$FIXTURE.manifest.json"
+```
+
+**Expected:** checksum `OK`, gzip exits 0, manifest identifies Hydra v2.2.0,
+synthetic data, exact row counts and logical bytes. Save the manifest in evidence.
+The fixture is dominated by client metadata with Unicode and varied lengths.
+The restored schema has OAuth relationships, but real login/token state is
+created by you in step 6. Repeated padding makes this unsuitable as a production
+storage or throughput benchmark.
+
+Download links, if you want to inspect the release before using the runner:
+
+| Profile | SQL archive | Verification files |
+|---|---|---|
+| Small, 3,200 clients | [Small SQL](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-small.sql.gz) | [Checksum](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-small.sha256), [manifest](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-small.manifest.json) |
+| Full, 2,236,700 clients | [35 GiB SQL](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-35g.sql.gz) | [Checksum](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-35g.sha256), [manifest](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-35g.manifest.json) |
+
+The full file's entire SQL content was audited and its boundary rows restored
+locally. A complete serial 35 GiB Aurora restore remains unverified. See
+[what has been tested](../validation.md); record your own full restore result.
+
+## 2. Create a private MySQL client configuration
+
+On the runner, open a private file:
+
+```bash
+umask 077
+```
+
+```bash
+vi runtime/restore/mysql.cnf
+```
+
+Enter the following. Replace the host with your **source writer** endpoint and
+the password with `MYSQL_PASSWORD` from your `.env`. This account owns the source
+schema; do not use the DMS read account.
+
+```ini
+[client]
+host=YOUR_SOURCE_WRITER_ENDPOINT
+port=3306
+user=hydra
+password=YOUR_MYSQL_HYDRA_PASSWORD
+ssl-mode=VERIFY_IDENTITY
+ssl-ca=/certs/global-bundle.pem
+default-character-set=utf8mb4
+```
+
+```bash
+chmod 600 runtime/restore/mysql.cnf
+```
+
+Check identity, TLS and the empty database using a native MySQL client:
+
+```bash
+docker run --rm --network host \
+  -v "$PWD/runtime/restore/mysql.cnf:/run/mysql.cnf:ro" \
+  -v "$PWD/runtime/certs:/certs:ro" mysql:8.0.41 \
+  mysql --defaults-extra-file=/run/mysql.cnf hydra \
+  -e "SELECT DATABASE(),CURRENT_USER(); SHOW SESSION STATUS LIKE 'Ssl_cipher'; SELECT COUNT(*) AS tables_before_restore FROM information_schema.tables WHERE table_schema='hydra';"
+```
+
+**Expected:** hydra, hydra account, nonempty cipher, **0 tables**. Stop if any
+value differs. The native endpoint and `VERIFY_IDENTITY` check the server hostname.
+[AWS MySQL TLS client connection](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_ConnectToInstanceSSL.CLI.html).
+
+## 3. Import the SQL yourself
+
+Run the restore in tmux so closing Session Manager does not interrupt it:
+
+```bash
+sudo dnf install -y tmux
+```
+
+```bash
+tmux new -s hydra-restore
+```
+
+Inside tmux, remain in `/opt/hydra-practice`. Set the fixture name again if needed.
+The following command streams the compressed SQL into MySQL. It does not expand
+a 35 GiB file onto the runner disk. `pipefail` makes either decompression or import
+failure return an error. Do not add `--force`, which would continue after SQL errors.
+
+```bash
+set -o pipefail
+```
+
+```bash
+gzip -dc "runtime/restore/$FIXTURE.sql.gz" | docker run --rm -i --network host \
+  -v "$PWD/runtime/restore/mysql.cnf:/run/mysql.cnf:ro" \
+  -v "$PWD/runtime/certs:/certs:ro" mysql:8.0.41 \
+  mysql --defaults-extra-file=/run/mysql.cnf hydra \
+  > evidence/restore.stdout 2> evidence/restore.stderr
+```
+
+Immediately record the exit status before running another command:
+
+```bash
+printf 'restore_exit=%s\n' "$?" | tee evidence/restore-result.txt
+```
+
+**Expected:** `restore_exit=0`. Detach with **Ctrl+B**, then **D** if you need to
+leave the terminal while it runs. Reconnect with `tmux attach -t hydra-restore`.
+In a second Session Manager terminal, inspect CPU, connections and volume I/O in
+**RDS → source writer → Monitoring**. The import may take hours; do not start a
+second import because the first appears quiet.
+
+The fixture commits client data in batches of at most 10,000 rows. Earlier
+committed batches remain after an interruption; the clean-restore recovery steps
+are still required. It temporarily disables foreign-key checks only in its import session,
+because table creation order crosses dependencies. Step 4 explicitly checks the
+restored relationship. Re-enabling checks does not retroactively validate rows.
+
+## 4. Verify the restore before starting Hydra
+
+Inspect `evidence/restore.stderr`. Any SQL error requires investigation even if
+other rows loaded. Open a native MySQL prompt using the same private configuration:
+
+```bash
+docker run --rm -it --network host -e MYSQL_HISTFILE=/dev/null \
+  -v "$PWD/runtime/restore/mysql.cnf:/run/mysql.cnf:ro" \
+  -v "$PWD/runtime/certs:/certs:ro" mysql:8.0.41 \
+  mysql --defaults-extra-file=/run/mysql.cnf hydra
+```
+
+In the **source MySQL prompt**, run:
+
+```sql
+SELECT COUNT(*) AS tables_restored FROM information_schema.tables WHERE table_schema='hydra';
+SELECT COUNT(*) AS clients, SUM(OCTET_LENGTH(metadata)) AS metadata_bytes FROM hydra_client;
+SELECT COUNT(*) AS networks FROM networks;
+SELECT COUNT(*) AS migration_entries FROM schema_migration;
+SELECT COUNT(*) AS orphan_clients FROM hydra_client c LEFT JOIN networks n ON c.nid=n.id WHERE n.id IS NULL;
+SELECT COUNT(*) AS signing_keys FROM hydra_jwk;
+SELECT COUNT(*) AS access_tokens FROM hydra_oauth2_access;
+SELECT COUNT(*) AS refresh_tokens FROM hydra_oauth2_refresh;
+```
+
+**Expected:** 15 tables; clients and metadata bytes exactly match the manifest;
+1 network; 206 migration entries; zero orphan clients, signing keys and tokens.
+Inspect the manifest for the other empty tables. Before starting Hydra, obtain
+an exact logical client-byte measurement using the catalog to include every column:
+
+```sql
+SET SESSION group_concat_max_len=1048576;
+SELECT CONCAT('SELECT SUM(',GROUP_CONCAT(CONCAT('COALESCE(OCTET_LENGTH(`',column_name,'`),0)') ORDER BY ordinal_position SEPARATOR '+'),') AS client_logical_bytes FROM hydra_client') INTO @measure_sql FROM information_schema.columns WHERE table_schema='hydra' AND table_name='hydra_client';
+SELECT @measure_sql;
+PREPARE measure_statement FROM @measure_sql;
+EXECUTE measure_statement;
+DEALLOCATE PREPARE measure_statement;
+```
+
+Match `expected_client_logical_bytes` in the manifest. For the full exercise,
+require **at least 37,580,963,840 bytes**. This is logical column content, not
+allocated Aurora volume size. Save counts and measurements without row payloads.
+Exit MySQL with `exit`.
+
+## 5. Start the source application explicitly
+
+On the runner, first check that the restored migration history is compatible
+with the pinned binary. The migration container must exit 0:
+
+```bash
+docker compose run --rm migrate-source
+```
+
+Then start only the intended services. `--no-deps` prevents Compose from repeating
+initialization or starting another backend through dependency traversal:
+
+```bash
+docker compose up -d --no-deps source portal gateway
+```
+
+```bash
+curl -fsS http://127.0.0.1:4445/health/ready
+```
+
+```bash
+curl -fsS http://127.0.0.1:8080/ -o /dev/null -w '%{http_code}\n'
+```
+
+**Expected:** readiness succeeds and portal returns 200. If not, inspect
+`docker compose ps` and `docker compose logs --tail=50 source portal gateway`.
+Do not print `.env` or full container environment in shared evidence.
+
+## 6. Create actual OAuth state through the browser
+
+On your **authenticated workstation**, open a tunnel to the runner's local portal:
+
+```bash
+aws ssm start-session --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["8080"],"localPortNumber":["8080"]}'
+```
+
+Keep the terminal open. Browse to **http://localhost:8080**. Use this exact
+hostname because it is the configured OAuth issuer and callback URL.
+
+1. Confirm **Active backend: source**.
+2. Select **Sign in**, choose **Alice**, and continue through consent.
+3. Open **Protected account**. Confirm **Verified by source** and Alice's subject.
+4. Select **Refresh existing token**. Confirm it remains Alice on source.
+5. In a separate private browser window, sign in as **Bob** and refresh once.
+6. Use **Revoke token and sign out** for Bob. Leave Alice's browser open.
+7. Repeat the MySQL token-table counts. Explain which tables are now populated.
+
+The application generates its own signing keys and token records. Do not copy
+keys or tokens into your report. Retest Alice shortly before cutover because a
+long restore/assessment session can outlast token expiry.
+
+**Checkpoint:** successful restore log, matching manifest counts/bytes, zero
+orphans, source readiness, Alice/Bob login and refresh. Continue to
+[SCT assessment](../04-sct/build.md). You will create visible CDC changes in
+[Module 05](../05-dms/use.md) after starting your migration task.

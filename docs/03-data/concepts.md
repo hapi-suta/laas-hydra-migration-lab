@@ -1,15 +1,20 @@
-# Separate data volume from application realism
+# Understand what you are restoring
 
-This lab has two complementary data paths. `scale.py` clones a genuine API-created Hydra client record, changes its identifier and metadata, and inserts it into the existing Hydra schema. `workload.py` drives real token issuance, revocation, and client insert/update/delete requests through Hydra APIs.
+You create an empty Aurora MySQL database, then import a supplied logical SQL
+fixture. It contains Hydra v2.2.0 table definitions, its source migration history,
+one network and synthetic OAuth clients. You create real authorization, consent,
+refresh and revocation state by using the application after the import.
 
-The bulk profile is explicitly **client/metadata-heavy**. It is useful for full-load volume, LOB configuration, indexes, and reconciliation, but it is not presented as the customer's production token/session distribution. Production fidelity requires measured table sizes, row widths, activity rates, and tenant relationships from the customer's source.
+The full fixture expands to at least 35 GiB of logical client content. Repeated
+metadata compresses heavily. This tests restoration, schema differences, LOB
+handling and migration checks; it does not model a customer's production data
+distribution or establish production performance.
 
-The bulk generator keeps the template client's serialized fields, hashed secret, and network relationship. It does not modify Hydra's schema or invent usable token ciphertext. Data includes varied metadata lengths, Unicode, and multiple synthetic cohorts. A cohort is metadata, not an independent Hydra tenant.
+SCT assesses schema compatibility. DMS moves selected application data. MySQL
+migration bookkeeping must not replace PostgreSQL's native migration history.
+The real target is initialized using the same pinned Hydra version's PostgreSQL
+migrations; SCT's converted output is examined in a separate comparison database.
 
-Size is measured as the sum of stored column-value byte lengths in the client table. Indexes, allocated pages, binlogs, and Aurora replicated storage are excluded. This makes 35 GiB an actual dataset target rather than a disk-allocation claim. Source and PostgreSQL physical storage sizes need not match.
-
-The generator first scans existing data, resumes after the highest generated client ID, inserts in bounded batches, and performs a final exact byte measurement. It is single-writer: do not run two scale processes against the same source. API workload is allowed alongside it after the initial schema is stable.
-
-The default is a small development profile. `--full-scale` is required above 1 GiB because generation, database storage, and migration consume real resources. Run the full 35 GiB profile in AWS after the small application path works.
-
-Avoid running Hydra's janitor during a measured rehearsal unless cleanup itself is the scenario. Token expiration remains real: mint the continuity test session shortly before cutover and record its TTL.
+**Explain before building:** how a compressed SQL download differs from a database
+snapshot, why the destination must be empty, and why importing client metadata
+alone does not prove token/session continuity.

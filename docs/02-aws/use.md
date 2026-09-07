@@ -8,7 +8,7 @@
 
 <details markdown="1"><summary>Verification hint</summary>
 
-Use the AWS console to inspect actual routes and security-group references; a Terraform source file is intended state, not proof of the deployed state. Use the runner's TLS database connection and capture the engine identity and encryption status.
+Use the AWS console to inspect actual routes and security-group references; a worksheet is intended state, not proof of the deployed state. Use the runner's TLS database connection and capture the engine identity and encryption status.
 
 </details>
 

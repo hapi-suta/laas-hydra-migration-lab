@@ -1,110 +1,56 @@
-# Validate and cut over from the Console
+# Validate and cut over with the Console
 
-**Environment:** DMS/CloudWatch Console and runner Session Manager terminal.
-**CLI equivalent:** [Validation and cutover commands](build.md). **Prerequisite:**
-full load complete, no table errors, validation understood, target Hydra stopped.
+**Before starting:** source application works, DMS full load is complete, CDC is
+running and target Hydra is stopped. Both paths use the same native SQL and
+application commands; the AWS Console controls the migration task.
 
-## 1. Preserve the continuity test
+## 1. Preserve Alice and fence the source
 
-Before fencing, sign in as Alice through the private portal and leave that browser
-session open. In the runner terminal, as **ec2-user** in `/opt/hydra-practice`:
+Follow [cutover steps 1-2](build.md): refresh Alice on source, preserve the browser
+session, save issuer/public keys, stop source writers and record the binlog position.
+Use **EC2 → runner → Connect → Session Manager** for the Docker and SQL commands.
+Keep portal running and source Aurora available for DMS to finish reading.
 
-```bash
-.venv/bin/python scripts/oauth_probe.py login
-```
+## 2. Inspect DMS completion and validation
 
-Keep `runtime/probe.cookies` private and unchanged. It references the existing
-portal session and will be used to verify the same pre-cutover credentials.
+1. Open **DMS → Database migration tasks → your task**. Confirm **Running**.
+2. Open **Table statistics**. Require all 14 selected tables loaded and no errors.
+3. Inspect each table's validation state and counters. Require completed validation
+   and zero pending, failed or suspended records. Unsupported validation needs
+   another complete check; do not count it as validated.
+4. Open **Monitoring** and its CloudWatch metric links. Set a recent time range
+   covering the writer fence. Inspect CDCIncomingChanges, CDCLatencySource and
+   CDCLatencyTarget over several fresh samples. Require the queue drained.
+5. Save screenshots with the metric timestamps and task identity. Inspect task
+   logs for apply errors. A low latency number does not prove row equality.
+6. Execute [cutover step 4's exact SQL comparisons](build.md#4-compare-exact-table-counts-while-writers-are-frozen)
+   in Session Manager. Require matching results while writers remain stopped.
 
-## 2. Fence every source writer
+[AWS DMS monitoring](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Monitoring.html)
+and [validation](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Validating.html).
 
-Stop the generator and workload in their original terminals. If the instructor
-started them as managed jobs, confirm their finished/stopped status. Confirm no
-other client or deployment process can write to the source.
-
-In **EC2 → runner → Connect → Session Manager**, as **ec2-user** in the project:
-
-```bash
-docker compose stop gateway source
-```
-
-Keep the portal process running: it holds the synthetic browser session. Record
-the fence timestamp. Do not stop Aurora or revoke DMS's source access; DMS still
-needs to read and drain its captured changes.
-
-## 3. Prove drain and compare the data
-
-1. In **DMS → Database migration tasks → your task → Table statistics**, confirm
-   full load is complete for every selected table and there are no failed or
-   suspended tables. Inspect validation results and resolve failures.
-2. In **Monitoring / CloudWatch**, check the task's incoming-change queue and
-   source/target latency over several samples after fencing. A single low-latency
-   point is insufficient evidence.
-3. In the runner terminal, execute the complete comparison:
-
-```bash
-.venv/bin/python scripts/reconcile.py --writers-fenced
-```
-
-`--writers-fenced` records your assertion; it does not stop writers for you. Require
-every table to pass both count and canonical hash comparison. Save the report.
-If the check fails, leave target Hydra stopped and investigate the mismatch.
-
-## 4. Stop DMS and prepare normal application sessions
+## 3. Stop migration apply
 
 1. In **DMS → Database migration tasks**, select only your task.
-2. Choose **Actions → Stop**, then confirm the selected task. Wait for **Stopped**.
-   Recheck the status before permitting target writes.
-3. In the runner terminal:
+2. Choose **Actions → Stop** and confirm the task identifier.
+3. Wait for **Stopped** and save final table statistics/checkpoint.
+4. Keep the task stopped throughout the following target tests.
 
-```bash
-.venv/bin/python scripts/target_check.py integrity
-```
+The equivalent commands are [cutover step 5](build.md#5-stop-dms-apply).
 
-Require zero orphan rows. The helper also resets owned sequences, including the
-legacy minimum-value case. Trigger re-enablement alone does not validate old rows.
+## 4. Check integrity and switch the application
 
-4. In the runner terminal:
+In the runner session, follow [steps 6-8](build.md#6-check-every-target-foreign-key-explicitly):
+execute every generated FK query, review/reset owned sequences, start target,
+verify readiness, change the two routing files and restart only gateway.
+These steps have no RDS/DMS Console button: they operate on SQL and your application.
+Every required SQL and Docker command is printed in the linked steps.
 
-```bash
-python3 scripts/lab.py start-target
-```
+## 5. Prove the application works after cutover
 
-Wait for readiness, then:
+Perform [step 9](build.md#9-prove-continuity-and-record-downtime) in the browser:
+Alice's existing session/refresh, Bob's new login/refresh/revocation, unchanged
+issuer/public keys, and measured downtime. Confirm source and DMS remain stopped.
 
-```bash
-python3 scripts/lab.py switch-target
-```
-
-The routing helper starts the gateway without restarting its source dependency.
-It does not make a failed migration safe; the preceding gates are mandatory.
-
-## 5. Prove retained and new sessions
-
-In the runner terminal, as **ec2-user**:
-
-```bash
-.venv/bin/python scripts/oauth_probe.py check --expect-backend target
-```
-
-Then:
-
-```bash
-.venv/bin/python scripts/oauth_probe.py refresh --expect-backend target
-```
-
-Both must pass. Refresh the original browser's protected-account page; require
-**Verified by target**. Use **Refresh existing token** there and verify it remains
-authenticated. Open a separate session for Bob and prove a new login. Revoke that
-new session and verify signed-out behavior. DMS must remain **Stopped** throughout.
-
-## 6. Record the recovery boundary
-
-After the target accepts new writes, the old source is stale. Do not choose a
-source switch as a casual rollback: that can lose new tokens, client changes and
-revocations. Keep the target fenced while diagnosing an unsuccessful cutover;
-recover forward or execute a separately designed reverse migration.
-
-**Evidence:** timestamps, writer fence, full-load/validation/queue state, complete
-reconciliation, Stopped DMS task, zero-orphan/sequence report, retained refresh,
-new login/revocation, and unchanged issuer/secrets configuration.
+**Checkpoint:** save actual results for every gate. Target startup can write data;
+a simple return to MySQL is unsafe after that boundary.

@@ -5,19 +5,60 @@ Session Manager terminal. **CLI equivalent:** [DMS build commands](build.md).
 **Prerequisite:** SCT comparison reviewed, target prepared and empty, LOB scan
 passes, source writer/binlogs ready, DMS instance Available.
 
-## 1. Create dedicated migration credentials
+## 1. Create the SQL users, secrets and role yourself
 
-Open **EC2 → runner → Connect → Session Manager**. Switch to **ec2-user**, enter
-`/opt/hydra-practice`, and run:
+Open **EC2 → your runner → Connect → Session Manager**. Switch to `ec2-user`
+and enter `/opt/hydra-practice`. Open the MySQL and PostgreSQL clients from the
+[application setup](../02-aws/application.md) and execute the complete SQL in
+[CLI lesson steps 1-2](build.md#1-create-the-source-replication-user-using-sql).
+Those SQL statements are shared by both interfaces: AWS Console cannot create a
+MySQL/PostgreSQL user merely by creating a Secrets Manager secret.
 
-```bash
-.venv/bin/python scripts/cloud.py grants
+Choose and privately retain separate source and target DMS passwords. Verify
+the grants and binlog queries before continuing. Then create the secrets:
+
+1. Open **Secrets Manager → Store a new secret**.
+2. Select **Other type of secret** and the **Key/value pairs** editor.
+3. Enter exactly these four keys for the source:
+
+| Key | Value |
+|---|---|
+| username | dms_repl |
+| password | The source DMS password you just set in SQL |
+| host | Your native source cluster writer endpoint |
+| port | 3306 |
+
+4. Select the default **aws/secretsmanager** encryption key → **Next**.
+5. Name the secret `your-prefix/dms-source`. Add your Project tag → **Next**.
+6. Leave automatic rotation off for this bounded lab → **Next → Store**.
+7. Repeat to create `your-prefix/dms-target` with `dms_apply`, its own password,
+   the target writer endpoint and port `5432`.
+8. Open each secret and copy its **complete ARN** to your worksheet. Do not select
+   the RDS-managed master secret as a DMS endpoint credential.
+
+Create the role that DMS assumes to read these secrets:
+
+1. Open **IAM → Roles → Create role → Custom trust policy**.
+2. Paste this policy for us-east-1, then continue and name the role
+   `your-prefix-dms-secrets`:
+
+```json
+{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"dms.us-east-1.amazonaws.com"},"Action":"sts:AssumeRole"}]}
 ```
 
-This creates the database users and fills the two existing DMS secrets. In
-**Secrets Manager**, inspect the secret names/ARNs and recent version dates.
-Never paste passwords into screenshots, guides or DMS task JSON. Do not rerun
-the grants step while DMS is active because it rotates its passwords.
+3. On the new role open **Permissions → Add permissions → Create inline policy**.
+4. Select **JSON** and paste this complete policy, replacing both ARN placeholders:
+
+```json
+{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["secretsmanager:GetSecretValue","secretsmanager:DescribeSecret"],"Resource":["YOUR_SOURCE_DMS_SECRET_ARN","YOUR_TARGET_DMS_SECRET_ARN"]}]}
+```
+
+5. Name it `ReadLabEndpoints`, create it, and record the role ARN.
+6. Confirm the Resource array names only your two endpoint secrets. Your Console
+   identity needs permission to pass this role to DMS.
+
+**Expected:** two populated secrets and a scoped read role, with SQL users already
+created. [AWS's Console secret/role procedure](https://docs.aws.amazon.com/dms/latest/userguide/security_iam_secretsmanager.html).
 
 ## 2. Import the database CA
 
@@ -76,12 +117,12 @@ creating duplicates. Resolve permission, network and TLS failures explicitly.
 2. Enter your lab's task identifier, replication instance, source endpoint and
    target endpoint. Choose **Migrate existing data and replicate ongoing changes**.
 3. Select the JSON editor for **Task settings** and paste the complete
-   `migration/task-settings.json` from the lab bundle. Review the saved settings:
+   [task-settings JSON shown in the CLI lesson](build.md#8-write-and-explain-the-task-settings). Review the saved settings:
    `DO_NOTHING`, full load + CDC, all source-DDL flags false, limited LOB mode
    with a 64 KiB limit, validation enabled, dedicated control schema, and strict
    error handling.
 4. Under **Table mappings → JSON editor**, paste the complete reviewed
-   `runtime/table-mappings.json`. It selects exact tables including `networks`
+   [14-table mapping JSON shown in the CLI lesson](build.md#7-write-and-review-the-exact-table-mappings). It selects exact tables including `networks`
    and maps MySQL `hydra` to PostgreSQL `public`. Do not replace it with a
    `hydra_%` wildcard or copy source migration bookkeeping.
 5. For startup behavior, choose **Manually later**. Create the task and wait for
@@ -100,7 +141,7 @@ creating duplicates. Resolve permission, network and TLS failures explicitly.
    **CloudWatch → Metrics → DMS**, graph `CDCLatencySource`, `CDCLatencyTarget`,
    `CDCIncomingChanges`, task throughput and replication-instance CPU/memory/
    swap/free storage. Select the dimensions belonging to this task/instance.
-5. Continue bounded source API activity. Confirm insert/update/delete counters
+5. Perform the [manual CDC exercise](use.md). Confirm insert/update/delete counters
    advance on the affected tables; retain the successful workload evidence.
 
 ## 7. Add an alarm and practice recovery
@@ -108,9 +149,11 @@ creating duplicates. Resolve permission, network and TLS failures explicitly.
 In **CloudWatch → Alarms → Create alarm → Select metric → DMS**, select this
 task's `CDCLatencyTarget`. Use one-minute periods, Maximum, threshold >60 seconds
 for five periods as an initial lab threshold. Name it with your project prefix.
-Use an existing instructor-approved notification destination, or create the alarm
-without actions; the Console still displays alarm state. Do not send notifications
-to a customer without the instructor's chosen destination.
+Choose **Missing data: Treat missing data as missing**. Configure no notification
+action for this exercise. Review the exact task dimensions, create the alarm and
+record its name. The Console displays state; this exercise does not send messages.
+The [CloudWatch CLI alternative](build.md#11-inspect-cloudwatch-and-create-your-own-lab-alarm)
+shows metric discovery, sample retrieval and the equivalent alarm command.
 
 For a stopped task, first diagnose the cause. **Resume processing** continues from
 the checkpoint; **Restart from beginning / Reload target** is a different action.

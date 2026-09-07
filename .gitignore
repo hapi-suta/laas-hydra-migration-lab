@@ -11,3 +11,5 @@ __pycache__/
 terraform.tfvars
 *.auto.tfvars
 .DS_Store
+
+artifacts/

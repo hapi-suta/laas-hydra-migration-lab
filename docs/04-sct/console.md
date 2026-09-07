@@ -9,36 +9,77 @@ Console is another service with its own configuration and support matrix; it is
 not the SCT desktop application. This exercise specifically produces an SCT
 assessment and compares it with Hydra's native PostgreSQL schema.
 
-## 1. Install and configure the tools
+## 1. Install SCT and the JDBC drivers yourself
 
-1. Use the [official SCT installation guide](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.html)
-   to download the appropriate Windows/Linux package and verify the distribution.
-   The current desktop support list does not include macOS; a Mac user can use
-   the runner CLI path or a supported workstation for GUI practice.
-2. Install the official MySQL Connector/J and PostgreSQL JDBC drivers. Open
-   **SCT → Settings → Global settings → Drivers**, browse to each JAR, and save.
-   Record the SCT build and driver versions in your evidence.
-3. Open **RDS → Databases** in the AWS Console. Record the two cluster **writer
-   endpoints**, ports and target comparison database `sct_compare`. Do not choose
-   the application target database `hydra` for applying converted SQL.
+1. Open the [AWS SCT installation procedure](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.Procedure.html).
+2. On a supported Windows workstation, download the Windows ZIP, extract it,
+   launch the MSI, accept the license and complete the installer. On Ubuntu or
+   Fedora, download the matching package and use the exact dpkg/rpm installation
+   command on that AWS page. Native macOS is not on the desktop support list;
+   use the [runner CLI lesson](build.md) or a supported workstation.
+3. Follow [AWS package verification](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.InstallValidation.html).
+   For Windows, inspect the MSI digital signature before installing. Record the
+   installed SCT build from **Help → About**.
+4. Download MySQL Connector/J and PostgreSQL JDBC JARs from the links in
+   [CLI step 1](build.md#1-install-java-sct-and-both-jdbc-drivers). Extract the
+   MySQL distribution if downloading its ZIP from the vendor site.
+5. In **SCT → Settings → Global settings → Drivers**, choose the MySQL and
+   PostgreSQL driver files, then save. Record both driver versions.
+6. In RDS, record your two cluster writer endpoints. The comparison target
+   database is **sct_compare**, which you created in Module 02.
 
-## 2. Establish private, verified connections
+## 2. Create your trust store and private connections
 
-Use the two [SSM remote-host tunnels](build.md#2-connect-sct-to-the-private-databases)
-from the CLI path. Keep them open in separate workstation terminals. Use the
-instructor-prepared RDS trust store and TLS configuration; do not disable
-certificate checks.
+Create the RDS trust store yourself using [CLI step 2](build.md#2-build-your-rds-trust-store).
+The Linux commands can run on your supported Linux workstation. For Windows,
+use the runner to create the public-CA JKS, then transfer it to your workstation
+using Session Manager's file text route below. This file contains public
+certificates, not private keys or database credentials.
 
-For hostname verification through the tunnels, the instructor can map the **exact
-native RDS endpoint names** to `127.0.0.1` in the workstation's hosts file, while
-SCT uses those native names with local ports 13306 and 15432. The SSM remote-host
-parameters still name the real remote endpoints, which the runner resolves in
-AWS. This keeps the certificate hostname intact. Record and remove the temporary
-workstation mappings when finished. Do not change Route 53 or AWS DNS records.
+On the runner, run `base64 -w0 runtime/sct/rds-trust.jks`. Copy the single line
+into a local file named `rds-trust.b64` using Notepad. In **Windows PowerShell**, in
+that file's directory, decode it:
 
-Alternatively, run SCT on an authorized workstation with private network access
-and use native endpoints on ports 3306/5432 directly. Verify the network path
-before entering credentials.
+```powershell
+[IO.File]::WriteAllBytes("$PWD\rds-trust.jks",[Convert]::FromBase64String((Get-Content .\rds-trust.b64 -Raw)))
+```
+
+Record the trust-store password you chose. In SCT **Settings → Global settings →
+Security → Trust store → Select existing trust store**, add/import your `rds-trust.jks` as the trusted store, entering that
+password. Choose this store in each connection's SSL settings.
+[AWS SCT encrypted RDS connections](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Source.Encrypt.RDS.html).
+
+From two separate authenticated **workstation terminals**, start the tunnels:
+
+```bash
+aws ssm start-session --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["YOUR_SOURCE_WRITER_ENDPOINT"],"portNumber":["3306"],"localPortNumber":["13306"]}'
+```
+
+```bash
+aws ssm start-session --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["YOUR_TARGET_WRITER_ENDPOINT"],"portNumber":["5432"],"localPortNumber":["15432"]}'
+```
+
+Replace all three placeholders in each command. Windows users can execute these
+in a Bash-compatible AWS CLI terminal, or put the parameters JSON in a local file
+and pass `--parameters file://source-tunnel.json` / `target-tunnel.json` from
+PowerShell. Each JSON file contains the corresponding object shown above.
+Keep both tunnels open. Free local ports 13306/15432 first if already occupied.
+[AWS remote-host port forwarding](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-sessions-start.html).
+
+For verified hostnames, edit your **workstation** hosts file as administrator:
+Windows `C:\Windows\System32\drivers\etc\hosts` with elevated Notepad, or
+Linux `/etc/hosts` with `sudo vi /etc/hosts`. Add these two lines with the exact
+native endpoint names from RDS:
+
+```text
+127.0.0.1 YOUR_SOURCE_WRITER_ENDPOINT
+127.0.0.1 YOUR_TARGET_WRITER_ENDPOINT
+```
+
+SCT then uses those native names on local ports 13306 and 15432. The runner still
+resolves the real endpoints in AWS for the remote side of each tunnel. Remove
+these two workstation entries after SCT practice. Do not change Route 53 records
+or disable certificate checking to resolve a hostname mismatch.
 
 ## 3. Create the project and source connection
 
@@ -47,11 +88,11 @@ before entering credentials.
 2. Choose **Add source → MySQL → Next**.
 3. Enter a connection name such as `HYDRA_MYSQL`. Use the native source hostname
    and the applicable direct/tunnel port.
-4. Enter the dedicated `sct_reader` credential supplied privately by bootstrap.
+4. Enter the dedicated `sct_reader` credential you created in Module 02.
    It has SELECT and SHOW VIEW access for this isolated lab. Do not use the DMS
    replication user as a substitute for SCT's required privileges.
 5. Select **Use SSL**. On the SSL tab select **Require SSL** and **Verify server
-   certificate**, and select the instructor-prepared trust store containing the
+   certificate**, and select the trust store you created in step 2 containing the
    applicable RDS CA certificates. Leave password storage disabled unless your
    organization's workstation policy explicitly allows SCT's vault.
 6. Choose **Test Connection**; require success, then **Connect**.
@@ -98,11 +139,10 @@ before entering credentials.
 
 ## 7. Prepare the real migration target
 
-Return to the runner's Session Manager terminal and follow the inventory review,
-mapping generation, LOB scan and guarded target-seed preparation in the
-[CLI build](build.md#4-approve-the-inventory-and-generate-mappings). The real
-target is initialized by the pinned Hydra migrations, with its native migration
-history preserved. Target Hydra remains stopped until cutover.
+Return to the runner and complete [the native SQL schema checks](schema-checks.md):
+inventory, action-item worksheet, maximum LOB scan and guarded removal of the
+unused target network seed. You execute and inspect every SQL statement yourself.
+The PostgreSQL migration history remains intact; target Hydra stays stopped.
 
 **Evidence:** successful source/target connection tests, saved SCT project,
 assessment PDF/CSV, conversion SQL, action-item resolutions, schema discrepancy

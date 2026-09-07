@@ -17,6 +17,8 @@ OUT = ROOT / 'site'
 
 def main():
     pages = sorted(DOCS.rglob('*.md'))
+    if OUT.exists():
+        shutil.rmtree(OUT)
     OUT.mkdir(exist_ok=True)
     titles = {p: next((line[2:].strip() for line in p.read_text().splitlines() if line.startswith('# ')), p.stem) for p in pages}
     manifest = json.loads((DOCS / 'navigation.json').read_text())
@@ -38,12 +40,16 @@ def main():
             if console.exists():
                 selected = ' class="active" aria-current="page"' if p == console else ''
                 nav += f'<a{selected} href="{prefix}{folder}/console.html"><span>CONSOLE</span>{html.escape(titles[console])}</a>'
+            for extra in module.get('extra', []):
+                page = DOCS / folder / (extra + '.md')
+                selected = ' aria-current="page"' if page == p else ''
+                nav += f'<a{selected} href="{prefix}{folder}/{extra}.html"><span>STEPS</span>{html.escape(titles[page])}</a>'
             nav += '</details>'
-        nav += f'<a class="home" href="{prefix}sources.html">Sources & assumptions</a>'
+        nav += f'<a class="home" href="{prefix}workstation.html">Install workstation tools</a><a class="home" href="{prefix}worksheet.html">Your lab worksheet</a><a class="home" href="{prefix}validation.html">What has been tested</a><a class="home" href="{prefix}sources.html">Sources & assumptions</a>'
         body = markdown.markdown(p.read_text(), extensions=['fenced_code', 'tables', 'toc', 'md_in_html'])
         body = re.sub(r'href="([^"#]+)\.md(#[^"]*)?"', lambda m: f'href="{m[1]}.html{m[2] or ""}"', body)
         key = str(relative)
-        footer = '' if p.name in ('index.md', 'start.md', 'sources.md') else f'<section class="checkpoint"><strong>Record your checkpoint</strong><p>Mark complete after you have saved the evidence requested in this lesson. Progress stays in this browser; it is not a server verification.</p><button id="complete" data-key="{key}">Mark lesson complete</button><span id="saved" aria-live="polite"></span></section>'
+        footer = '' if p.name in ('index.md', 'start.md', 'sources.md', 'validation.md') else f'<section class="checkpoint"><strong>Record your checkpoint</strong><p>Mark complete after you have saved the evidence requested in this lesson. Progress stays in this browser; it is not a server verification.</p><button id="complete" data-key="{key}">Mark lesson complete</button><span id="saved" aria-live="polite"></span></section>'
         result = f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(titles[p])} · Hydra Migration Lab</title><link rel="stylesheet" href="{prefix}assets/site.css"><script src="{prefix}assets/site.js" defer></script></head><body><a class="skip" href="#main">Skip to lesson</a><header><a class="brand" href="{prefix}index.html">StepUp Tech Academy<small>Customer migration practice</small></a><div class="header-right"><span>HYDRA / AURORA</span><a href="{prefix}downloads/hydra-practice.zip">Download lab</a><button id="menu" aria-label="Toggle lessons" aria-expanded="false">Lessons ☰</button></div></header><div class="layout"><aside aria-label="Lessons"><label class="search">Find a lesson<input id="search" type="search" placeholder="Search lesson titles…"></label>{nav}</aside><main id="main"><div class="eyebrow">CONCEPTS · BUILD · USE · SURVIVE</div>{body}{footer}<footer>StepUp Tech Academy · Hydra Aurora Migration Practice Lab<br>Verify the environment and save evidence at every phase gate.</footer></main></div></body></html>'''
         dest = OUT / relative
         dest.parent.mkdir(parents=True, exist_ok=True)

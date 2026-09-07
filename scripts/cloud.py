@@ -104,6 +104,7 @@ def main():
                 c.execute('GRANT CONNECT ON DATABASE hydra TO dms_apply')
                 c.execute('GRANT USAGE ON SCHEMA public TO dms_apply')
                 c.execute('GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO dms_apply')
+                c.execute(sql.SQL('GRANT dms_apply TO {}').format(sql.Identifier(admins['target']['username'])))
                 c.execute('CREATE SCHEMA IF NOT EXISTS awsdms_control AUTHORIZATION dms_apply')
                 c.execute('GRANT USAGE,CREATE ON SCHEMA awsdms_control TO dms_apply')
                 c.execute('GRANT SET ON PARAMETER session_replication_role TO dms_apply')
@@ -118,11 +119,11 @@ def main():
             cert.parent.mkdir(parents=True, exist_ok=True)
             cert.write_bytes(urlopen(f'https://truststore.pki.rds.amazonaws.com/{a.region}/{a.region}-bundle.pem', timeout=30).read())
         cert_id = cfg['name'] + '-rds-ca'
-        existing = dms.describe_certificates(Filters=[{'Name': 'certificate-id', 'Values': [cert_id]}])['Certificates']
+        existing = [c for page in dms.get_paginator('describe_certificates').paginate() for c in page['Certificates'] if c['CertificateIdentifier'] == cert_id]
         certificate_arn = existing[0]['CertificateArn'] if existing else dms.import_certificate(CertificateIdentifier=cert_id, CertificatePem=cert.read_text())['Certificate']['CertificateArn']
         for n in ('source', 'target'):
             endpoint_id = cfg['name'] + '-' + n
-            existing = dms.describe_endpoints(Filters=[{'Name': 'endpoint-id', 'Values': [endpoint_id]}])['Endpoints']
+            existing = [e for page in dms.get_paginator('describe_endpoints').paginate() for e in page['Endpoints'] if e['EndpointIdentifier'] == endpoint_id]
             if existing:
                 state[n] = existing[0]['EndpointArn']
                 continue

@@ -1,53 +1,35 @@
-# Start Hydra on MySQL
+# Plan the migration before creating resources
 
-**Environment:** Laptop, your user. **Prerequisite:** Python dependencies and a running Docker engine. **Checkpoint:** sign in and refresh a token on source Hydra.
+This orientation creates no resources. Your complete AWS build begins in Module
+02. You do not need a local prebuilt lab or an instructor's deployment.
 
-## 1. Initialize private lab configuration
+## 1. Draw the two data paths
 
-On **Laptop**, as **your user**, in the project root:
+Draw the source application writing to Aurora MySQL. Add SCT's read connection
+to MySQL and conversion connection to the separate PostgreSQL comparison database.
+Add DMS's MySQL binlog read and PostgreSQL apply connections. Finally draw the
+application's PostgreSQL route after cutover.
 
-```bash
-python3 scripts/lab.py init
-```
+Use [the architecture concepts](concepts.md) to label ports, TLS, network routes,
+security groups and the difference between assessment, full load and CDC.
 
-This creates random demo passwords and shared Hydra secrets in `.env`, plus the active-backend configuration in `runtime/`. Re-running preserves existing credentials.
+## 2. Fill in your starting worksheet
 
-The script reports that private configuration was created; it never prints the passwords.
+Follow [Before you begin](../start.md). Record your assigned account, region,
+new prefix, two nonoverlapping CIDRs, two available AZs, tool versions, budget and
+cleanup date. Every later resource ID is added to this same worksheet.
 
-## 2. Start the source application
+## 3. Explain the application proof
 
-On **Laptop**, as **your user**:
+The demo portal is a login/consent client for real open-source Hydra. You restore
+the synthetic schema/data into MySQL, start Hydra and create actual OAuth state.
+After migration you must refresh the same pre-cutover Alice session, then perform
+a new Bob login and revocation against PostgreSQL.
 
-```bash
-python3 scripts/lab.py up
-```
+The lab uses Hydra v2.2.0 on both engines. Changing Hydra version at the same time
+as the database would add a separate variable. Confirm the customer's release
+before treating this baseline as a customer migration plan.
 
-The helper builds the portal, starts the databases, waits for database health checks, runs both Hydra schema migrations, and starts source Hydra and the gateway. Initial image downloads can take several minutes. The final readiness message identifies `http://localhost:8080`.
-
-On **Laptop**, as **your user**:
-
-```bash
-python3 scripts/lab.py status
-```
-
-Verify MySQL, PostgreSQL, source, portal, and gateway are running. The migration containers should have exited with code 0. Target Hydra should not yet be running.
-
-## 3. Exercise the browser flow
-
-Open `http://localhost:8080` in your browser. Select **Sign in**, choose **alice**, and allow consent. The protected page should display `active: true`, Alice's subject, and `lab-portal` as the client. Select **Refresh existing token** and confirm the protected page still works.
-
-Keep this browser session open for the migration rehearsal. Do not print or publish its tokens.
-
-## 4. Save the baseline
-
-On **Laptop**, as **your user**:
-
-```bash
-.venv/bin/python scripts/workload.py --seconds 30 --workers 1 --rps 1
-```
-
-`--seconds` bounds the run, `--workers` controls concurrency, and `--rps` sets token cycles per second. The script issues real tokens, revokes a subset, and creates/updates/deletes transient clients. It writes counts to `evidence/workload.json`. Require issued tokens and zero errors.
-
-If startup fails, use `python3 scripts/lab.py logs` and distinguish database readiness from schema migration failure and portal registration failure. Do not repeatedly delete database volumes as a troubleshooting shortcut.
-
-**Evidence:** source backend, successful login and refresh, container status, and workload report.
+**Checkpoint:** your worksheet and an explanation of how you will prove session
+continuity. Continue to [Console infrastructure setup](../02-aws/console.md) or
+[the AWS CLI build](../02-aws/build.md).

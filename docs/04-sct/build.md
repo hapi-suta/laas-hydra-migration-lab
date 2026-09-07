@@ -1,88 +1,264 @@
-# Assess with SCT and prepare the target
+# Assess the schema using the AWS SCT CLI
 
-**Choose your interface:** the CLI steps are below. For click-by-click instructions, use the [AWS Console / GUI path](console.md).
+**Where:** EC2 runner, Session Manager, ec2-user, `/opt/hydra-practice`.
+**Before starting:** restore the source and exercise the application in Module 03.
+The PostgreSQL databases `hydra` and `sct_compare` were created by you in Module 02.
+Keep target Hydra stopped. [Desktop GUI alternative](console.md).
 
-**Environment:** Runner for schema inspection; Laptop for SCT. **Prerequisite:** both native schemas initialized, target Hydra stopped.
+SCT produces the assessment and conversion. You examine its output in
+`sct_compare`. The DMS destination remains `hydra.public`, initialized by the
+pinned Hydra PostgreSQL migrations. This separates the schema-conversion lesson
+from the application's version-specific database contract.
 
-## 1. Capture the actual schema inventory
+## 1. Install Java, SCT and both JDBC drivers
 
-On **Runner**, as **ec2-user**:
-
-```bash
-.venv/bin/python scripts/inventory.py
-```
-
-The script queries both databases and writes `evidence/inventory.json`. Read every table, primary key, exclusion, and source/target column type. Investigate missing keys or mismatched column sets. Preserve the source network ID and associated rows.
-
-## 2. Connect SCT to the private databases
-
-Install SCT and the JDBC drivers using the official vendor instructions in Sources. The target comparison database `sct_compare` was created by bootstrap.
-
-On **Laptop**, as **your user**, open a dedicated MySQL tunnel. Replace the runner ID and native source endpoint with your Terraform outputs:
+On the runner:
 
 ```bash
-aws ssm start-session --target i-REPLACE --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["SOURCE.cluster-REPLACE.us-east-1.rds.amazonaws.com"],"portNumber":["3306"],"localPortNumber":["13306"]}'
+sudo dnf install -y java-17-amazon-corretto-headless unzip
 ```
-
-In a second **Laptop** terminal, as **your user**, open the target tunnel:
 
 ```bash
-aws ssm start-session --target i-REPLACE --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["TARGET.cluster-REPLACE.us-east-1.rds.amazonaws.com"],"portNumber":["5432"],"localPortNumber":["15432"]}'
+mkdir -p runtime/sct evidence/sct
 ```
-
-The remote-host document connects from the runner to the named private endpoint. Keep both sessions open. Stop local database containers first if they occupy those laptop ports.
-
-Create an SCT project with MySQL source and Aurora PostgreSQL target. Configure the source at `127.0.0.1:13306` and target comparison database at `127.0.0.1:15432`, database `sct_compare`. Retrieve only the dedicated lab credentials privately; do not place them in the site or reports. Use TLS with the RDS CA bundle. Local tunnel hostnames do not match the RDS certificate: configure supported CA verification for this SCT tunnel, or use native-hostname resolution with a correctly configured tunnel. Do not disable certificate checking to conceal a mismatch. Hydra and DMS use direct native endpoints with hostname verification.
-
-## 3. Produce the assessment and conversion
-
-In SCT, select source database `hydra`, create the assessment report, and review every action item. Export the report and converted SQL into your private evidence directory. Apply conversion only to `sct_compare` after checking the target connection.
-
-Compare the SCT result with the native `hydra.public` schema. Create a worksheet with columns: object, source definition, SCT result, native Hydra definition, chosen mapping, reason, and validation query. Resolve discrepancies before migration.
-
-## 4. Approve the inventory and generate mappings
-
-On **Runner**, as **ec2-user**:
 
 ```bash
-vi evidence/inventory.json
+chmod 700 runtime/sct evidence/sct
 ```
-
-Set `reviewed` to `true` only after the review. Do not change `column_match` to hide a real mismatch; correct the underlying schema decision and regenerate inventory.
-
-On **Runner**, as **ec2-user**:
 
 ```bash
-.venv/bin/python scripts/mappings.py
+curl -fL https://s3.amazonaws.com/publicsctdownload/jars/AWSSchemaConversionToolBatch.jar -o runtime/sct/AWSSchemaConversionToolBatch.jar
 ```
-
-This creates exact selection rules and a `hydra` → `public` schema transformation in `runtime/table-mappings.json`.
-
-On **Runner**, as **ec2-user**:
 
 ```bash
-.venv/bin/python scripts/lob_check.py
+curl -fL https://repo.maven.apache.org/maven2/com/mysql/mysql-connector-j/26.7.0/mysql-connector-j-26.7.0.jar -o runtime/sct/mysql.jar
 ```
-
-Require `pass: true` in `evidence/lob-check.json`. The scan can take time on the large dataset.
-
-Hydra's native migrations seed a `networks` row even when its server has never
-started. In this disposable target, remove that seed so the source network row can
-be loaded. Keep target Hydra stopped. The helper refuses to clear a target that
-contains application data or multiple networks.
-
-On **Runner**, as **ec2-user**:
 
 ```bash
-.venv/bin/python scripts/target_check.py prepare --disposable-target --hydra-stopped
+curl -fL https://jdbc.postgresql.org/download/postgresql-42.7.13.jar -o runtime/sct/postgresql.jar
 ```
-
-On **Runner**, as **ec2-user**:
 
 ```bash
-.venv/bin/python scripts/target_check.py empty
+unzip -t runtime/sct/AWSSchemaConversionToolBatch.jar | tail -n 1
 ```
 
-Require every selected target data table to be empty. Preserve migration bookkeeping. If target Hydra already seeded data, restore a fresh target or use an instructor-reviewed cleanup; `DO_NOTHING` does not empty tables for you.
+```bash
+unzip -p runtime/sct/AWSSchemaConversionToolBatch.jar META-INF/MANIFEST.MF
+```
 
-**Evidence:** SCT report, conversion SQL, reviewed discrepancy worksheet, inventory, mappings, passing LOB scan, and empty-target check.
+```bash
+sha256sum runtime/sct/*.jar > evidence/sct/downloads.sha256
+```
+
+Record Java version with `java -version` and SCT build from the manifest.
+The engineering run used SCT build 677, built with Java 17. AWS's general CLI page
+still references Corretto 11. The command below reflects the tested build's Java
+17 requirement. A locally calculated hash records what you downloaded; it is not
+an independent vendor signature verification.
+[AWS SCT CLI documentation](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Reference.html),
+[JDBC setup](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.JDBCDrivers.html),
+[MySQL Connector/J](https://dev.mysql.com/downloads/connector/j/),
+[PostgreSQL JDBC](https://jdbc.postgresql.org/download/).
+
+## 2. Build your RDS trust store
+
+Download the public regional CA bundle:
+
+```bash
+curl -fL https://truststore.pki.rds.amazonaws.com/us-east-1/us-east-1-bundle.pem -o runtime/sct/rds-region.pem
+```
+
+Split the PEM bundle into individual certificates. This awk command copies each
+complete certificate to its own file; it does not contact a database:
+
+```bash
+awk '/-----BEGIN CERTIFICATE-----/{n++; f=sprintf("runtime/sct/ca-%d.pem",n)} f{print > f} /-----END CERTIFICATE-----/{close(f); f=""}' runtime/sct/rds-region.pem
+```
+
+Choose a long alphanumeric trust-store password privately. Avoid apostrophes
+and newlines because the later SCT CLI parameter uses single-quoted text. This protects a store containing public
+CA certificates, not database passwords:
+
+```bash
+read -rsp 'New SCT trust-store password: ' SCT_TRUST_PASSWORD
+```
+
+```bash
+export SCT_TRUST_PASSWORD
+```
+
+Import every regional certificate into a new JKS store:
+
+```bash
+for cert in runtime/sct/ca-*.pem; do
+  keytool -importcert -noprompt -alias "$(basename "$cert" .pem)" \
+    -file "$cert" -keystore runtime/sct/rds-trust.jks -storetype JKS \
+    -storepass:env SCT_TRUST_PASSWORD || break
+done
+```
+
+```bash
+keytool -list -keystore runtime/sct/rds-trust.jks -storepass:env SCT_TRUST_PASSWORD
+```
+
+Require one trusted entry per downloaded certificate. If an alias exists from an
+earlier attempt, inspect the existing store rather than replacing it blindly.
+[AWS RDS CA bundles](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.SSL.html).
+
+## 3. Open SCT interactive mode
+
+On the runner:
+
+```bash
+java --add-opens=java.base/jdk.internal.loader=ALL-UNNAMED -Xmx2g \
+  -Djdk.jar.maxSignatureFileSize=128000000 \
+  -jar runtime/sct/AWSSchemaConversionToolBatch.jar -type interactive
+```
+
+`-Xmx2g` limits the Java heap. The signature-size setting and module opening were
+needed for the tested batch build. They do not disable database TLS verification.
+At the **SCT prompt**, enter each command below and its terminating `/` line.
+These are SCT commands, not Bash or AWS CLI commands. Values use straight single
+quotes. Replace placeholders before submitting. SCT output/project logs can echo
+credentials; keep the entire SCT working directory private.
+
+```text
+help
+/
+```
+
+```text
+SetGlobalSettings -settings: '{"mysql_driver_file":"/opt/hydra-practice/runtime/sct/mysql.jar","postgresql_driver_file":"/opt/hydra-practice/runtime/sct/postgresql.jar"}' -save: 'true'
+/
+```
+
+```text
+CreateProject -name: 'hydra_assessment' -directory: '/opt/hydra-practice/runtime/sct'
+/
+```
+
+```text
+LoadTrustStore -name: 'RDS' -password: 'YOUR_TRUST_STORE_PASSWORD' -file: '/opt/hydra-practice/runtime/sct/rds-trust.jks'
+/
+```
+
+Use the `sct_reader` password you created in Module 02 and your native writer
+endpoint. Runner connections use direct ports, without workstation tunnels:
+
+```text
+AddSource -name: 'MYSQL' -vendor: 'MYSQL' -host: 'YOUR_SOURCE_WRITER_ENDPOINT' -port: '3306' -user: 'sct_reader' -password: 'YOUR_SCT_PASSWORD' -useSSL: 'true' -requireSSL: 'true' -verifyServerCertificate: 'true' -trustServerCertificate: 'false' -trustStoreAlias: 'RDS'
+/
+```
+
+Use the target `hydra` role password from Module 02. Check the database field:
+
+```text
+AddTarget -name: 'POSTGRESQL' -vendor: 'AURORA_POSTGRESQL' -host: 'YOUR_TARGET_WRITER_ENDPOINT' -port: '5432' -database: 'sct_compare' -user: 'hydra' -password: 'YOUR_POSTGRES_HYDRA_PASSWORD' -useSSL: 'true' -requireSSL: 'true' -verifyServerCertificate: 'true' -trustServerCertificate: 'false' -trustStoreAlias: 'RDS'
+/
+```
+
+Require successful connections with no authentication/TLS errors. Do not continue
+on a failed AddSource/AddTarget operation. The exact command parameters are in
+[AWS's SCT CLI reference PDF](https://s3.amazonaws.com/publicsctdownload/AWS%20SCT%20CLI%20Reference.pdf).
+
+## 4. Map, assess and export
+
+At the SCT prompt:
+
+```text
+AddServerMapping -sourceTreePath: 'Servers.MYSQL' -targetTreePath: 'Servers.POSTGRESQL'
+/
+```
+
+```text
+PrintSourceTreeNodeChildren -treePath: 'Servers.MYSQL'
+/
+```
+
+Expect the Schemas node. Select only your source hydra schema:
+
+```text
+CreateReport -treePath: 'Servers.MYSQL.Schemas.hydra'
+/
+```
+
+```text
+Convert -treePath: 'Servers.MYSQL.Schemas.hydra'
+/
+```
+
+```text
+SaveTargetSQL -treePath: 'Servers.POSTGRESQL.Schemas.hydra' -file: '/opt/hydra-practice/evidence/sct/converted.sql'
+/
+```
+
+```text
+SaveReportPDF -file: '/opt/hydra-practice/evidence/sct/assessment.pdf'
+/
+```
+
+```text
+SaveReportCSV -directory: '/opt/hydra-practice/evidence/sct'
+/
+```
+
+```text
+SaveProject
+/
+```
+
+```text
+quit
+```
+
+**Expected:** nonempty report and SQL files. Conversion warnings/errors remain
+work to do even if export succeeds. The engineering assessment reported 17 JSON
+action items and 12 date/default items. Record your own counts and resolutions.
+[AWS assessment reports](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_AssessmentReport.html).
+
+## 5. Review the converted SQL and apply only to the comparison database
+
+Back in the runner shell:
+
+```bash
+vi evidence/sct/converted.sql
+```
+
+For each action item, locate its table/column and compare it with the catalog
+queries in [schema checks](schema-checks.md). Record the original expression,
+reviewed replacement and reason in `evidence/sct/decisions.md` using `vi`.
+For example, when SCT leaves a MySQL JSON column unresolved, inspect the same
+column in the native PostgreSQL target and use that actual JSON/JSONB definition
+in the comparison conversion. PostgreSQL supports both types; a generic SCT
+warning does not mean otherwise. Do not bulk-replace every JSON or timestamp.
+
+Save the reviewed SQL as `evidence/sct/reviewed.sql`. Inspect every database/schema
+name and any DROP statements. It must create objects only in the comparison
+database. Reconnect with the PostgreSQL client from Module 02, changing only
+`dbname=hydra` to `dbname=sct_compare`, using the `hydra` role and its password.
+Bind the evidence directory so psql can read the reviewed SQL. In a fresh shell,
+first set `export TARGET_HOST=YOUR_TARGET_WRITER_ENDPOINT` from your worksheet:
+
+```bash
+docker run --rm -it --network host -e PSQL_HISTORY=/dev/null \
+  -v "$PWD/runtime/certs:/certs:ro" -v "$PWD/evidence/sct:/review:ro" postgres:17.4 \
+  psql "host=$TARGET_HOST port=5432 dbname=sct_compare user=hydra sslmode=verify-full sslrootcert=/certs/global-bundle.pem" -W
+```
+
+In **psql**:
+
+```sql
+SELECT current_database(),current_user;
+\set ON_ERROR_STOP on
+\i /review/reviewed.sql
+\dn
+\dt hydra.*
+```
+
+Require `sct_compare` before executing the file. If an error occurs, stop and
+resolve its action item; do not declare the schema converted because some tables
+exist. Save the error and corrected SQL. Comparison application is a learner
+exercise; it has not been fully replayed in the engineering cloud run.
+
+Finish the [native schema, LOB and empty-target checks](schema-checks.md). The
+real DMS target stays `hydra.public`. Continue to [DMS setup](../05-dms/build.md).

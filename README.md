@@ -1,40 +1,54 @@
 # Hydra Aurora Migration Practice Lab
 
-A customer-operated **Concepts → Build → Use → Survive** lab: run Hydra on MySQL,
-generate a measured dataset, assess schema conversion with SCT, migrate through
-AWS DMS to Aurora PostgreSQL, and prove authentication continuity.
+A student-built **Concepts → Build → Use → Survive** lab. The student creates
+Aurora MySQL and Aurora PostgreSQL, restores supplied synthetic MySQL data,
+installs Hydra, assesses conversion with AWS SCT, configures DMS full load and
+CDC, validates data, cuts over the application and removes the lab.
 
-## Start here
+Start with the [published customer guide](https://hapi-suta.github.io/laas-hydra-migration-lab/)
+or [local guide source](docs/index.md). Every AWS lesson includes Console and
+native CLI alternatives. SQL/application steps are shown explicitly. Nothing is
+pre-provisioned for the student by following or opening the guide.
 
-- Customer guide: [docs/index.md](docs/index.md)
-- Local rehearsal: `python3 scripts/lab.py init`, then `python3 scripts/lab.py up`
-- Build the guide site: `python3 scripts/build_site.py`
-- Preview: `python3 -m http.server 8000 --directory site`
-- AWS foundation: [infra/README.md](infra/README.md)
-- Verification record: [VALIDATION.md](VALIDATION.md)
+The restore fixture includes schema and synthetic rows. The full profile expands
+to at least 35 GiB of logical client content. It compresses heavily and is not a
+production performance distribution. The learner creates real OAuth state through
+the portal after restoration. See the [validation record](VALIDATION.md) for
+executed tests and remaining cloud rehearsal gaps.
 
-The local MySQL/PostgreSQL environment is for authoring and introductory practice.
-SCT/DMS exercises run against real AWS Aurora. Local database copying is not a
-substitute for the cloud migration exercise.
+Hydra v2.2.0 is the pinned open-source practice baseline. Confirm the customer's
+actual version before treating results as a customer migration plan.
 
-Hydra `v2.2.0` is a provisional **open-source demo baseline**, not a claim about the
-customer's release or a recommendation to upgrade/downgrade their service. Confirm
-the customer's version before treating results as production evidence.
+## Repository contents
 
-## Files
-
-| Path | Role |
+| Path | Purpose |
 |---|---|
-| `docs/` | Customer learning journey |
-| `app/` | Synthetic login/consent portal and protected account page |
-| `compose.yaml` | Local source, target, and stable issuer gateway |
-| `scripts/` | Setup, API workloads, inventory, mapping, reconciliation, evidence |
-| `infra/` | AWS VPCs, Aurora, DMS instance, and SSM lab runner |
-| `migration/` | DMS task policies and mapping outputs |
-| `tests/` | Checks for migration gates, site, and application helpers |
-| `runtime/` | Ignored local credentials and transient state |
-| `evidence/` | Ignored execution reports; reviewed summary in VALIDATION.md |
+| docs/ | Student guides, AWS references and explicit checkpoints |
+| app/ | Synthetic login/consent portal and protected account page |
+| compose.cloud.yaml | Application container definitions used on the student's runner |
+| migration/ | Complete example DMS table mappings and task settings |
+| scripts/ | Site builder and optional authoring/verification tools |
+| infra/ | Optional engineering references, outside the student setup path |
+| tests/ | Migration utility checks and published-guide checks |
+| runtime/, evidence/, artifacts/ | Ignored private authoring files, execution reports and release build assets |
 
-Guides never embed customer credentials. Keep generated runtime files and raw
-token evidence private. The demo identities are synthetic; do not connect this
-portal to production identity systems.
+## Build the website locally
+
+Install the Python requirements, then run:
+
+```bash
+python3 scripts/build_site.py
+```
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+```bash
+python3 -m http.server 8000 --directory site
+```
+
+The GitHub Actions workflow builds, checks and deploys the site from main. The
+source bundle uses an explicit file allowlist and excludes credentials, runtime
+state, database contents and Terraform state. Restore fixtures are separate release
+assets with manifests and SHA-256 checksums.

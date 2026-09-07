@@ -1,8 +1,8 @@
 # Find the orphaned resources
 
-After teardown, the instructor asks you to explain why AWS still shows storage charges for the practice name.
+After teardown, inspect why AWS may still show storage charges for your practice name.
 
-Check retained final snapshots, scheduled-deletion secrets, CloudWatch log retention, manually created DMS objects, and any failed Terraform deletion. Distinguish deliberate retention from a forgotten running service.
+Check retained final snapshots, scheduled-deletion secrets, CloudWatch log retention, manually created DMS objects, and any failed resource deletion. Distinguish deliberate retention from a forgotten running service.
 
 Do not remove shared resources or force-delete retained snapshots merely to make the bill disappear. Follow the agreed retention policy, then document the exact remaining cost sources and scheduled cleanup.
 

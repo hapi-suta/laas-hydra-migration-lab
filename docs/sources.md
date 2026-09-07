@@ -2,14 +2,14 @@
 
 ## Official references
 
-- [Hydra v2.2.0 source](https://github.com/ory/hydra/tree/v2.2.0) — demo version and database migrations.
-- [Ory Hydra application example](https://www.ory.com/blog/run-oauth2-server-open-source-api-security) — login/consent integration.
-- [Ory production preparation](https://www.ory.com/docs/hydra/self-hosted/production) — secrets, administrative API, and initial state.
+- [Hydra v2.2.0 source](https://github.com/ory/hydra/tree/v2.2.0) - demo version and database migrations.
+- [Ory Hydra application example](https://www.ory.com/blog/run-oauth2-server-open-source-api-security) - login/consent integration.
+- [Ory production preparation](https://www.ory.com/docs/hydra/self-hosted/production) - secrets, administrative API, and initial state.
 - [AWS SCT supported conversions](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Welcome.html).
 - [Install AWS SCT](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.html).
-- [MySQL source for SCT](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Source.MySQL.html) — JDBC, TLS, and permissions.
-- [MySQL source for DMS](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Source.MySQL.html) — writer/binlog prerequisites.
-- [PostgreSQL target for DMS](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Target.PostgreSQL.html) — constraints, permissions, sequences, endpoint settings.
+- [MySQL source for SCT](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Source.MySQL.html) - JDBC, TLS, and permissions.
+- [MySQL source for DMS](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Source.MySQL.html) - writer/binlog prerequisites.
+- [PostgreSQL target for DMS](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Target.PostgreSQL.html) - constraints, permissions, sequences, endpoint settings.
 - [DMS TLS settings](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Security.SSL.html).
 - [DMS DDL handling](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Tasks.CustomizingTasks.TaskSettings.DDLHandling.html).
 - [DMS validation](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Validating.html).

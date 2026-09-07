@@ -1,54 +1,119 @@
-# Before you begin
+# Start with an empty lab
 
-## Workspaces and identities
+You will create, configure, test and remove the lab yourself. An instructor's
+previous deployment is not a prerequisite and does not count as your work.
+Use a new resource prefix in your assigned sandbox; do not delete or reuse
+someone else's resources to obtain an empty starting point.
 
-| Name in the lessons | What it means |
+## 1. Sign in and identify the account
+
+1. Open your organization's AWS access portal and select the assigned sandbox
+   account and training role. If it uses direct IAM sign-in, use the account's
+   supplied sign-in URL. Never create access keys just to follow this guide.
+2. In the AWS Console's account menu, record the 12-digit account ID.
+3. Select **US East (N. Virginia), us-east-1**.
+4. Open **CloudShell** from the Console toolbar. Select Bash and run:
+
+```bash
+aws sts get-caller-identity
+```
+
+```bash
+aws --version
+```
+
+The returned account must match the Console. Use CloudShell for the AWS CLI
+creation steps; it is already authenticated. You also need workstation AWS CLI
+credentials for SSM port forwarding. With IAM Identity Center, on your workstation:
+
+```bash
+aws configure sso --profile hydra-lab
+```
+
+```bash
+aws sso login --profile hydra-lab
+```
+
+```bash
+aws sts get-caller-identity --profile hydra-lab
+```
+
+Enter the SSO start URL, SSO region, account and role from your organization's
+access portal. Choose us-east-1 as the default service region. Follow the browser
+sign-in prompt. For Bash terminals set `export AWS_PROFILE=hydra-lab`; in PowerShell
+set `$env:AWS_PROFILE="hydra-lab"`. Do not invent SSO settings.
+[AWS SSO configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html)
+and [CloudShell setup](https://docs.aws.amazon.com/cloudshell/latest/userguide/getting-started.html).
+
+## 2. Install workstation tools
+
+Follow the [numbered workstation installation steps](workstation.md) for your OS.
+
+| Tool | Installation and check | Used for |
+|---|---|---|
+| AWS CLI v2 | Follow the OS-specific installer in [AWS CLI installation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html); open a new terminal; `aws --version` must show aws-cli/2 | SSM tunnel and CLI alternative |
+| Session Manager plugin | Select your OS in [AWS plugin installation](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html); run `session-manager-plugin` | Private portal and database tunnels |
+| AWS SCT desktop | Follow the complete [SCT installation/connection lesson](04-sct/console.md) | Schema assessment and conversion GUI |
+| MySQL and PostgreSQL JDBC | Download the versions/URLs shown in the SCT lesson; select both JARs in SCT | Database connectivity |
+
+The native AWS CLI blocks use **Bash** (CloudShell or Linux/macOS terminal).
+For SCT desktop, AWS currently lists **Windows, Fedora and Ubuntu 64-bit**.
+Use a supported desktop for the GUI route. A Mac can use the documented SCT CLI
+on the runner, but this is a separate interface, not a claim of native Mac GUI support.
+
+You install Docker, Python and the application on your newly created runner in
+Module 02. A preinstalled instructor workstation, Terraform state or runtime
+JSON file is not required. Terraform/Python deployment helpers in the source
+repository are optional engineering references, not the main learning path.
+
+## 3. Record your lab settings before provisioning
+
+Copy the [complete lab worksheet](worksheet.md) into your private notes. Begin
+with these settings:
+
+| Setting | Your value |
 |---|---|
-| **Laptop / your user** | Your workstation, AWS CLI, Terraform, SCT, browser |
-| **Runner / ec2-user** | The disposable Amazon Linux EC2 machine in the source VPC |
-| **Source** | Hydra backed by Aurora MySQL |
-| **Target** | Hydra backed by Aurora PostgreSQL; kept stopped until migration completes |
+| Account / role | Your assigned sandbox account and role |
+| Region | us-east-1 |
+| Resource prefix | A new name, for example hydra-practice-01 |
+| Source / target CIDRs | 10.81.0.0/16 and 10.82.0.0/16, after checking for conflicts |
+| Two available AZs | Select from your account's describe-availability-zones output |
+| Spend limit / cleanup date | Record before creating paid resources |
+| Hydra baseline | v2.2.0 on both engines; customer-version confirmation remains necessary |
 
-Use the project root as the current directory unless a step says otherwise. On the runner it is `/opt/hydra-practice`. Do not SSH into an Aurora database: Aurora is managed; SQL connections originate from the runner or an SSM tunnel.
+Your role needs the lab's VPC, EC2, RDS, DMS, IAM/PassRole, SSM, Secrets Manager
+and CloudWatch permissions. If an operation returns AccessDenied, record the
+exact action and ask your account administrator to grant the required lab-scoped
+access; do not switch to an unrelated AWS account.
 
-## Required software
+Two Aurora writers, DMS, EC2, storage, I/O, private endpoints and public IPv4 all
+incur charges. Use [AWS Pricing Calculator](https://calculator.aws/) for your
+region and record a cleanup date. A tag or closed browser does not stop billing.
 
-Install Python 3.9 or later, Docker with Compose v2, Git, AWS CLI v2, Terraform 1.5 or later, and the AWS Session Manager plugin. Install AWS SCT and its MySQL/PostgreSQL JDBC drivers on your laptop using the official instructions linked in Sources.
+## 4. Understand the workspaces
 
-For AWS work, use an instructor-approved **sandbox account** with sufficient permission for VPC, RDS, DMS, EC2, IAM, SSM, Secrets Manager, and CloudWatch. Do not use customer production credentials. Set a spending budget and teardown date before provisioning; the stack includes two paid Aurora writers, EC2, DMS, storage, and interface endpoints.
+| Name in the guide | Where commands run |
+|---|---|
+| CloudShell / AWS operator | AWS CLI control commands using your Console identity |
+| Workstation | SCT desktop and local browser; AWS CLI SSM tunnels |
+| Runner / ec2-user | Your EC2 machine, /opt/hydra-practice; SQL clients and application containers |
+| MySQL prompt | Commands after opening the source mysql client |
+| PostgreSQL prompt | Commands after opening psql against the stated target database |
 
-On **Laptop**, as **your user**, after extracting the downloaded bundle:
+The training topology uses one account, two peered VPCs and Docker on EC2.
+It demonstrates real Aurora/SCT/DMS. Cross-account IAM, production EKS/ArgoCD and
+customer-specific traffic require a separate rehearsal. All identities/data here
+are synthetic; the 35 GiB client-heavy profile is not a measured customer distribution.
 
-```bash
-cd hydra-practice
-```
+## 5. Follow this order and save your own evidence
 
-On **Laptop**, as **your user**:
+1. [Create the infrastructure - Console](02-aws/console.md) or [AWS CLI](02-aws/build.md).
+2. [Install Hydra and create SQL users](02-aws/application.md).
+3. [Restore MySQL and exercise the application](03-data/build.md).
+4. [Assess and convert - SCT GUI](04-sct/console.md) or [SCT CLI](04-sct/build.md).
+5. [Configure full load and CDC - DMS Console](05-dms/console.md) or [AWS CLI](05-dms/build.md).
+6. [Validate and cut over](06-cutover/build.md), then recover failures and clean up.
 
-```bash
-python3 -m venv .venv
-```
-
-`-m venv` creates an isolated Python environment in `.venv`.
-
-On **Laptop**, as **your user**:
-
-```bash
-.venv/bin/pip install -r requirements.txt
-```
-
-`-r` reads the pinned package list. Verify the command finishes successfully; retain the installation output in your private exercise notes.
-
-## Lab assumptions
-
-The demo uses open-source Hydra **v2.2.0** as a provisional baseline. Confirm your customer's version before extending the findings to their deployment. Source and target use the same Hydra version. Changing engine and Hydra version simultaneously obscures the cause of failures.
-
-The runnable cloud lab uses **one account, two VPCs, and Docker on EC2**. It practices real Aurora/DMS and private peering without first requiring EKS. Cross-account permissions, Helm/ArgoCD, and EKS cutover must be rehearsed separately before calling this a full production-topology reproduction.
-
-All identities and secrets are generated for the lab. Runtime credentials live in ignored files with restrictive permissions. Never paste `.env`, token responses, or raw customer data into GitHub Pages.
-
-## Save evidence
-
-Create an `evidence` directory in the project root. Scripts produce JSON reports there. Record observations and timestamps alongside them. A lesson's browser checkbox only tracks your reading; it does not verify AWS state.
-
-[Continue to Concepts](01-demo/concepts.md)
+At every checkpoint record your own timestamps, settings and observed results.
+Keep secrets/tokens out of evidence. The browser's completion checkbox tracks
+reading, not whether AWS actually passed a test.

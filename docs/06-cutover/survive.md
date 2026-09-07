@@ -1,9 +1,41 @@
-# Recover before target writes
+# Diagnose a failed cutover
 
-Rehearse this on a fresh reset, before target Hydra starts. The instructor introduces a target readiness failure after source fencing but before the first target write.
+Practice on your own disposable lab. Do not damage a completed customer migration.
+If target readiness fails, leave gateway stopped and inspect target logs with
+`docker compose logs --tail=50 target`. Check the native writer endpoint, TLS CA,
+SQL grants, native schema and unchanged shared secrets from Module 02.
 
-Keep the source frozen while you diagnose. Check endpoint configuration, TLS, schema state, and required secrets. Decide whether the time budget supports a fix or a return to source service.
+A return to source is only safe if you can prove **no target writes occurred**.
+Target startup itself may write state. If that proof is unavailable, keep traffic
+fenced and recover forward. Do not equate an unsuccessful browser login with an
+unchanged target database.
 
-If returning to source, keep target stopped, restore source Hydra, restore source gateway selection, and resume traffic only after its health and authentication checks pass. Retain the migration failure evidence for the next run.
+For a deliberate abort **before target was ever started**, on the runner:
 
-**Success:** the customer can identify why this rollback was safe and contrast it with a rollback after PostgreSQL accepted refreshes or new logins. The lab intentionally does not pretend to support automatic reverse replication.
+```bash
+docker compose up -d --no-deps source
+```
+
+```bash
+curl -fsS http://127.0.0.1:4445/health/ready
+```
+
+```bash
+printf '{"active":"source"}\n' > runtime/active.json
+```
+
+```bash
+printf 'upstream hydra_active { server source:4444; }\n' > runtime/upstream.conf
+```
+
+```bash
+docker compose up -d --no-deps gateway
+```
+
+Verify Alice's login/refresh on source. If DMS was stopped after a valid drain and
+the required binlogs remain available, use the [resume exercise](../07-incidents/build.md)
+to resume CDC from its checkpoint for the next cutover attempt. Do not reload a
+populated target blindly.
+
+**Evidence:** failure cause, proof of the recovery boundary, corrected setting,
+restored application behavior and the next rehearsal plan.

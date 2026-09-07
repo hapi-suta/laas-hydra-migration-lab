@@ -5,10 +5,9 @@ This profile deliberately models client/metadata-heavy volume. It does not claim
 to be a customer-measured session/token distribution. Source schema is untouched.
 """
 import argparse
-import hashlib
+import base64
 import json
 import random
-import string
 import time
 import uuid
 from pathlib import Path
@@ -17,7 +16,7 @@ from db import ident
 
 def payload(row_id, size):
     rng = random.Random(row_id)
-    return json.dumps({'lab': 'hydra-migration', 'cohort': row_id % 25, 'ordinal': row_id, 'unicode': 'Montréal 東京', 'description': ''.join(rng.choices(string.ascii_letters + string.digits, k=size))}, ensure_ascii=False)
+    return json.dumps({'lab': 'hydra-migration', 'cohort': row_id % 25, 'ordinal': row_id, 'unicode': 'Montréal 東京', 'description': base64.b64encode(rng.randbytes((size * 3 + 3) // 4)).decode()[:size]}, ensure_ascii=False)
 
 
 def main():

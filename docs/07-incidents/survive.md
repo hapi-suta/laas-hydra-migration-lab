@@ -1,9 +1,10 @@
-# A healthy portal hides a failed migration
+# Recover when the source works but CDC has stopped
 
-The source application is working. The instructor stops the DMS task while maintaining a small source workload. Your customer sees successful logins and assumes migration is healthy.
+Use [the stop/resume exercise](build.md#3-stop-and-resume-cdc-from-its-checkpoint).
+The source portal can continue issuing tokens while DMS is stopped. Check task
+status, last successful checkpoint, metric timestamps, errors and source binlog
+retention. Do not infer replication health from a working login.
 
-Diagnose the discrepancy using task status, table statistics, metric timestamps, and a source update that does not appear on target. Explain why application availability and replication health are independent.
-
-Recover within the retained binlog window or document why a new full load is necessary. Stop the workload, drain CDC, and reconcile after recovery. Do not mark the scenario complete based only on a resumed task status.
-
-**Deliverable:** a short incident report with source availability, replication gap, recovery action, final validation, and one monitoring improvement.
+Resume only while the required binlogs remain available. Prove the missing client
+arrives, finish update/delete checks, drain CDC and rerun validation. If the logs
+expired, record the gap and rebuild a fresh migration baseline.
