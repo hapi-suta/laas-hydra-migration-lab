@@ -81,7 +81,7 @@ def main():
             wait_ready('http://localhost:5445/health/ready')
         # Truncate/write same inode: nginx has a bind mount of this file.
         private_write(ROOT / 'runtime/upstream.conf', f'upstream hydra_active {{ server {target}:4444; }}\n')
-        compose('start', 'gateway')
+        compose('up', '-d', '--no-deps', 'gateway')
         compose('exec', '-T', 'gateway', 'nginx', '-t')
         compose('exec', '-T', 'gateway', 'nginx', '-s', 'reload')
         private_write(ROOT / 'runtime/active.json', json.dumps({'active': target}))

@@ -12,6 +12,7 @@ from db import canonical, ident
 from mappings import build
 from reconcile import digest_rows
 from cloud import engine_versions
+from target_check import sequence_reset
 
 
 class Cursor:
@@ -22,6 +23,11 @@ class Cursor:
 
 
 class MigrationChecks(unittest.TestCase):
+    def test_legacy_zero_sequence_starts_at_minimum(self):
+        self.assertEqual(sequence_reset(0, 1, 1), (1, False))
+        self.assertEqual(sequence_reset(42, 1, 1), (42, True))
+        self.assertEqual(sequence_reset(None, 1, 1), (1, False))
+
     def test_dms_engine_version_response(self):
         self.assertEqual(engine_versions({'EngineVersions': [{'Version': '3.6.1'}]}), ['3.6.1'])
 

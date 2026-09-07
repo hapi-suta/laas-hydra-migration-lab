@@ -5,6 +5,13 @@ import json
 from pathlib import Path
 from db import connections, ident
 
+def sequence_reset(maximum, minimum, increment):
+    if increment <= 0:
+        raise ValueError('Descending sequences require a separate reviewed reset policy')
+    if maximum is None or maximum < minimum:
+        return minimum, False
+    return maximum, True
+
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
@@ -73,9 +80,11 @@ def main():
                     if seq:
                         c.execute('SELECT MAX(' + ident(col, 'pg') + ') FROM public.' + ident(t['table'], 'pg'))
                         maximum = c.fetchone()[0]
-                        if maximum is not None:
-                            c.execute('SELECT setval(%s,%s,true)', (seq, maximum))
-                            result['checks'].append({'sequence': seq, 'reset_to_maximum': True})
+                        c.execute('SELECT seqmin,seqincrement FROM pg_sequence WHERE seqrelid=%s::regclass', (seq,))
+                        minimum, increment = c.fetchone()
+                        value, called = sequence_reset(maximum, minimum, increment)
+                        c.execute('SELECT setval(%s,%s,%s)', (seq, value, called))
+                        result['checks'].append({'sequence': seq, 'reset_value': value, 'is_called': called})
     Path('evidence/target-' + a.action + '.json').write_text(json.dumps(result, indent=2))
     print(json.dumps(result, indent=2))
     source.close()

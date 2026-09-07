@@ -73,6 +73,7 @@ def main():
                 if not c.fetchone():
                     c.execute('CREATE ROLE hydra LOGIN')
                 c.execute(sql.SQL('ALTER ROLE hydra PASSWORD {}').format(sql.Literal(values['POSTGRES_PASSWORD'])))
+                c.execute(sql.SQL('GRANT hydra TO {}').format(sql.Identifier(admins['target']['username'])))
                 c.execute('GRANT CONNECT ON DATABASE hydra TO hydra')
                 c.execute('ALTER SCHEMA public OWNER TO hydra')
                 c.execute('CREATE EXTENSION IF NOT EXISTS pgcrypto')
