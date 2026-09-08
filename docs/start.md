@@ -1,4 +1,56 @@
-# Start with an empty lab
+# Start here: use your laptop
+
+**Start on your own laptop or desktop computer.** In this guide, **workstation**
+means that computer. You will use its browser to create the lab in AWS. Later,
+you will open a terminal connected to an EC2 machine in AWS and run the app and
+database commands there.
+
+## Before opening AWS
+
+Have these details from your instructor or AWS administrator:
+
+- Your AWS sign-in link, assigned account and training role. **KA001** is a lab
+  account label; ask for its actual 12-digit AWS account ID so you can check it.
+- Your approved AWS CLI sign-in method. For IAM Identity Center, get the SSO
+  start URL and SSO Region as well as the account and role.
+- Permission to install the laptop tools below and create the lab resources.
+- A new resource name such as `comcast-student-01`, plus your cleanup date.
+
+If those details have not been supplied, get them before creating resources.
+The public guide and lab downloads do not require a GitHub account.
+
+## Choose the computer for the SCT desktop exercise
+
+The browser and AWS CLI parts can start on Windows, macOS or Linux. For the SCT
+desktop exercise in task 3, arrange a **64-bit Windows, Ubuntu or Fedora desktop**.
+Windows lets you follow the PowerShell and SCT desktop steps on one computer.
+AWS does not list a native macOS SCT desktop app. If you use a Mac, arrange access
+to a supported desktop for that exercise, or choose the clearly marked SCT CLI
+alternative on your AWS runner.
+[AWS SCT supported operating systems](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.html).
+
+## Which computer does each job?
+
+| Place | What you do there | When |
+|---|---|---|
+| Laptop browser | Read this guide and use the AWS Console | Start here and task 1 |
+| Laptop terminal | Sign in with AWS CLI and keep private connections open | Setup below, then tasks 2 and 3 |
+| EC2 runner in AWS | Download the lab files and data, run Hydra and run SQL clients | Create it in task 1; use it from task 2 |
+| SCT desktop on your supported computer | View the schema assessment and conversion | Task 3 |
+| AWS DMS service | Copy rows between the two AWS databases | Task 4 |
+| Laptop browser again | Sign in as Alice and Bob and check the app | Tasks 2, 4, 5 and 6 |
+
+The 35 GiB dataset goes into **Aurora MySQL in AWS**. You download its archive
+on the runner during task 2. You do not need to install MySQL, PostgreSQL or
+Docker on your laptop for this route.
+
+**First actions:** keep this guide open in one browser tab, open your AWS
+sign-in link in a second tab, then follow step 1 below. After steps 1-4 you should
+have verified access and a completed setup worksheet. Only then begin task 1.
+`http://localhost:8080` will become useful after you start the app and open its
+connection in task 2; it will not show a lab app on a fresh laptop.
+
+## Use your own empty lab resources
 
 You will create, configure, test and remove the lab yourself. An instructor's
 previous deployment is not a prerequisite and does not count as your work.
@@ -33,7 +85,10 @@ The returned account must match the Console. CloudShell is already authenticated
 
 ## 2. Install workstation tools
 
-Follow the [numbered workstation installation steps](workstation.md) for your OS.
+On **your laptop**, follow the [numbered installation steps](workstation.md) for
+your operating system. Install and verify **AWS CLI v2** and the **Session Manager
+plugin** now. Return here for step 3. Install SCT and its JDBC drivers when you
+reach task 3; confirm access to a supported desktop now.
 
 | Tool | Installation and check | Used for |
 |---|---|---|
@@ -54,7 +109,15 @@ repository are optional engineering references, not the main learning path.
 
 ## 3. Sign in on your workstation for the private app connection
 
-Even on the Console path, your browser needs a Session Manager tunnel to reach the private app. With IAM Identity Center, on your workstation:
+Even on the Console path, your browser needs a Session Manager tunnel to reach
+the private app later. A tunnel forwards a port on your laptop to the app in AWS.
+Your browser's AWS sign-in does not automatically sign in the CLI on your laptop.
+
+On Windows, open **Start**, type **PowerShell**, and open it. On macOS, open
+**Terminal** from Applications → Utilities. On Linux, open your terminal app.
+The three commands below work in those terminals. Run one at a time.
+
+With IAM Identity Center, on **your laptop**:
 
 ```bash
 aws configure sso --profile hydra-lab
@@ -72,6 +135,14 @@ Enter the SSO start URL, SSO region, account and role from your organization's
 access portal. Choose us-east-1 as the default service region. Follow the browser
 sign-in prompt. For Bash terminals set `export AWS_PROFILE=hydra-lab`; in PowerShell
 set `$env:AWS_PROFILE="hydra-lab"`. Do not invent SSO settings.
+
+**Expected:** the last command returns JSON containing your assigned 12-digit
+`Account`. Compare it with the AWS Console account you recorded in step 1.
+If your organization does not use IAM Identity Center, use the CLI login method
+and profile supplied by its administrator instead of running `aws configure sso`.
+Resolve laptop CLI access before creating the lab; you will need it to reach the
+private app.
+
 [AWS SSO configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html)
 and [CloudShell setup](https://docs.aws.amazon.com/cloudshell/latest/userguide/getting-started.html).
 
@@ -125,7 +196,7 @@ are synthetic; the 35 GiB client-heavy profile is not a measured customer distri
   past an error or run both creation alternatives for the same resource.
 - When a step says `vi filename`, press **i**, paste or type the shown content,
   replace its placeholders, then press **Esc**, type **:wq** and press **Enter**
-  to save. To leave without saving, press **Esc**, type **:q!** and press **Enter**.
+to save. To leave without saving, press **Esc**, type **:q!** and press **Enter**.
 - `export`, `mkdir` and `chmod` often return to the prompt without printing anything. That is normal if no error appears. Commands that create AWS resources may take several minutes; wait for the stated status before continuing.
 - Leave a MySQL prompt with `exit`; leave a PostgreSQL prompt with `\q`.
   This returns you to the runner shell.

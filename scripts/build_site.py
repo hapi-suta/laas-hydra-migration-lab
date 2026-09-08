@@ -45,7 +45,7 @@ def main():
     for p in pages:
         relative = p.relative_to(DOCS).with_suffix('.html')
         prefix = '../' * (len(relative.parts) - 1)
-        nav = f'<a class="home" href="{prefix}index.html">The project</a><a class="home" href="{prefix}start.html">Before you begin</a>'
+        nav = f'<a class="home" href="{prefix}index.html">The project</a><a class="home" href="{prefix}start.html">Start here: laptop setup</a>'
         for step in json.loads((DOCS / 'journey.json').read_text()):
             selected = ' aria-current="page"' if p == DOCS / step['page'] else ''
             href = step['page'].replace('.md', '.html')

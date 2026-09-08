@@ -2,6 +2,10 @@
 
 **Result:** an Aurora MySQL source, an RDS PostgreSQL target, and a runner that can connect to both.
 
+**Where you start:** your laptop's browser, signed in to the assigned AWS Console.
+Keep this guide in another tab. At this point you are clicking AWS forms; you
+have not connected to a runner or started the app yet.
+
 The runner is the EC2 machine where you install Hydra and run database commands. DMS uses a separate replication instance to copy the data. You create these resources in your own lab namespace.
 
 Complete [Before you begin](../start.md) first. Keep [your worksheet](../worksheet.md) open to record each resource ID. This is one AWS account with two connected VPCs. Production cross-account networking and EKS are outside this practice lab.
@@ -39,5 +43,10 @@ Start with the AWS Console instructions below and follow their numbered steps. T
 - The DMS replication instance is available.
 
 Save the source writer endpoint, target instance endpoint, security group IDs and runner ID. You will use them in the next task.
+
+**Your next workspace:** in task 2, open **EC2 → Instances → your runner → Connect
+→ Session Manager → Connect**. The terminal opens inside your laptop's browser,
+but commands in it run on the EC2 computer in AWS. This is different from the
+PowerShell or Terminal window on your laptop.
 
 [Next: 2. Restore data and run Hydra](02-restore.md)

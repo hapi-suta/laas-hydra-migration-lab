@@ -1,4 +1,8 @@
-# Install your workstation tools
+# Install tools on your laptop
+
+**Where:** your own laptop or desktop, before connecting to any EC2 runner.
+Windows uses **PowerShell**; macOS uses **Terminal**; Linux uses its terminal app.
+Run only your operating system's installation steps.
 
 Choose the instructions for your workstation. These tools let you authenticate
 and open SSM tunnels. AWS resource creation can use CloudShell, which already
@@ -119,7 +123,7 @@ plugin is required on the workstation that opens the tunnel, not just the runner
 
 ## 3. Authenticate and verify the account
 
-Return to [Before you begin](start.md#1-sign-in-and-identify-the-account) for SSO
+Return to [laptop sign-in, step 3](start.md#3-sign-in-on-your-workstation-for-the-private-app-connection) for SSO
 profile setup, browser authentication and STS identity verification. Keep the
 same account and us-east-1 region for the whole exercise. Do not place long-lived
 access keys in the downloaded project.

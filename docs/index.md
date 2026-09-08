@@ -12,6 +12,17 @@ You start with an empty AWS lab. You build the old and new systems, restore the
 practice data, copy it, switch the application, and test it again. This is a
 Comcast training scenario using synthetic data, not Comcast production data.
 
+## Start on your laptop
+
+Open this guide in one browser tab and your assigned **AWS Console** in another.
+Your laptop is where you read the guide, manage AWS and later use the app.
+You create a Linux computer in AWS, called the **runner**, to run Hydra and the
+database commands. Aurora MySQL and RDS PostgreSQL also run in AWS.
+
+**Your first step: [Start here: laptop setup](start.md).** That page tells you
+what access you need, which tools go on your laptop, and when to move to the
+runner. No working app is expected yet. You will first open the app in task 2.
+
 ## What you will see
 
 | Part of the story | What you do | What you should see |

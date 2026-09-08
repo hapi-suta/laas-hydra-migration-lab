@@ -94,26 +94,68 @@ that file's directory, decode it:
 [IO.File]::WriteAllBytes("$PWD\rds-trust.jks",[Convert]::FromBase64String((Get-Content .\rds-trust.b64 -Raw)))
 ```
 
+On **Ubuntu or Fedora desktop**, save the copied line as `rds-trust.b64` in your
+local notes folder using a text editor. Open a terminal in that folder and run:
+
+```bash
+base64 --decode rds-trust.b64 > rds-trust.jks
+```
+
 Record the trust-store password you chose. In SCT **Settings → Global settings →
 Security → Trust store → Select existing trust store**, add/import your `rds-trust.jks` as the trusted store, entering that
 password. Choose this store in each connection's SSL settings.
 [AWS SCT encrypted RDS connections](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Source.Encrypt.RDS.html).
 
-From two separate authenticated **workstation terminals**, start the tunnels:
+Return to the **computer running SCT desktop**. Open the database tunnels there,
+so SCT on that computer can reach the private databases. Use your worksheet to
+replace the runner instance ID, source writer endpoint and target endpoint.
+If this is a different computer from your original laptop, first complete the
+[CLI/plugin installation and sign-in](../workstation.md) on this computer too.
+Use the assigned CLI profile if your organization supplied a login method other
+than `hydra-lab` SSO.
+
+### Windows: prepare the files in PowerShell
+
+Open PowerShell. Create the notes folder and both JSON files before starting a
+connection. Replace the endpoint placeholders inside the quoted JSON first.
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$HOME\hydra-lab-notes" | Out-Null
+Set-Location "$HOME\hydra-lab-notes"
+'{"host":["YOUR_SOURCE_WRITER_ENDPOINT"],"portNumber":["3306"],"localPortNumber":["13306"]}' | Set-Content -Encoding ascii -Path source-tunnel.json
+'{"host":["YOUR_TARGET_INSTANCE_ENDPOINT"],"portNumber":["5432"],"localPortNumber":["15432"]}' | Set-Content -Encoding ascii -Path target-tunnel.json
+```
+
+In that window, start the source connection:
+
+```powershell
+aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters file://source-tunnel.json
+```
+
+Open a **second PowerShell window**, enter the same folder, and start the target
+connection. Keep the first window open.
+
+```powershell
+Set-Location "$HOME\hydra-lab-notes"
+aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters file://target-tunnel.json
+```
+
+### Ubuntu or Fedora desktop: two terminal windows
+
+Run the source command in one authenticated terminal and the target command in a
+second terminal:
 
 ```bash
-aws ssm start-session --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["YOUR_SOURCE_WRITER_ENDPOINT"],"portNumber":["3306"],"localPortNumber":["13306"]}'
+aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["YOUR_SOURCE_WRITER_ENDPOINT"],"portNumber":["3306"],"localPortNumber":["13306"]}'
 ```
 
 ```bash
-aws ssm start-session --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["YOUR_TARGET_INSTANCE_ENDPOINT"],"portNumber":["5432"],"localPortNumber":["15432"]}'
+aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["YOUR_TARGET_INSTANCE_ENDPOINT"],"portNumber":["5432"],"localPortNumber":["15432"]}'
 ```
 
-Replace all three placeholders in each command. Windows users can execute these
-in a Bash-compatible AWS CLI terminal, or put the parameters JSON in a local file
-and pass `--parameters file://source-tunnel.json` / `target-tunnel.json` from
-PowerShell. Each JSON file contains the corresponding object shown above.
-Keep both tunnels open. Free local ports 13306/15432 first if already occupied.
+**Expected on either OS:** each terminal reports a session and waits for
+connections. Keep both open while using SCT.
+Free local ports 13306/15432 first if already occupied.
 [AWS remote-host port forwarding](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-sessions-start.html).
 
 For verified hostnames, edit your **workstation** hosts file as administrator:

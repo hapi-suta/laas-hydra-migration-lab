@@ -7,6 +7,9 @@ variables from these entries with `export VARIABLE=YOUR_RECORDED_VALUE`.
 
 | Variable | What to record | Your value |
 |---|---|---|
+| Laptop / SCT desktop | Your laptop OS and the Windows/Ubuntu/Fedora desktop you will use for SCT | |
+| AWS sign-in | Assigned portal link, account label and training role; no passwords | |
+| CLI login | Approved login method; for SSO, its start URL and SSO Region | |
 | LAB_ACCOUNT | STS Account ID | |
 | LAB | Unique resource prefix | |
 | AWS_REGION | us-east-1 | |

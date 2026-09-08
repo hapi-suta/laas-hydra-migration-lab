@@ -1,5 +1,5 @@
 {
-  "completed_at_utc": "2026-09-08T04:39:14.333676+00:00",
+  "completed_at_utc": "2026-09-08T05:00:45.314999+00:00",
   "pass": true,
   "topology": {
     "source": "Aurora MySQL 3.13.0",
@@ -17,7 +17,7 @@
     "largest_lob_bytes": 17260,
     "profile": "Synthetic metadata-heavy client volume plus API OAuth activity",
     "full_downloadable_fixture_import_tested": true,
-    "full_downloadable_fixture_verification_complete": false
+    "full_downloadable_fixture_verification_complete": true
   },
   "sct": {
     "pass": true,
@@ -423,15 +423,42 @@
     "time": "2026-09-08T04:01:16.474Z"
   },
   "limits": [
-    "Author DMS data used generated SQL inserts. The complete downloadable fixture was separately imported into an isolated Aurora database; its final verification is still running.",
+    "Author DMS data used generated SQL inserts. The downloadable full fixture was separately restored and checked in an isolated Aurora database after cutover.",
     "AWS Console and SCT desktop GUI instructions follow official documentation; they were not individually replayed through every screen.",
     "Synthetic repeated client metadata is not a measured customer workload or production performance benchmark."
   ],
   "downloadable_fixture_restore": {
-    "import_completed": true,
-    "mysql_exit": 0,
-    "gzip_exit": 0,
+    "pass": true,
+    "started_at": "2026-09-08T04:01:57.569867+00:00",
+    "client_rows": 2236700,
+    "logical_client_bytes": 37582389656,
+    "metadata_bytes": 36894597160,
+    "table_counts": {
+      "hydra_jwk": 0,
+      "hydra_oauth2_access": 0,
+      "hydra_oauth2_authentication_session": 0,
+      "hydra_oauth2_code": 0,
+      "hydra_oauth2_flow": 0,
+      "hydra_oauth2_jti_blacklist": 0,
+      "hydra_oauth2_logout_request": 0,
+      "hydra_oauth2_obfuscated_authentication_session": 0,
+      "hydra_oauth2_oidc": 0,
+      "hydra_oauth2_pkce": 0,
+      "hydra_oauth2_refresh": 0,
+      "hydra_oauth2_trusted_jwt_bearer_issuer": 0,
+      "networks": 1,
+      "schema_migration": 206,
+      "hydra_client": 2236700
+    },
+    "client_network_orphans": 0,
+    "sha256": "9fe04ff0af9e192c94dfa0483184c1c692c4f7c58be6a55754e0dfea2ad2b03a",
+    "engine": "Aurora MySQL 3.13.0",
+    "serial_native_mysql_import": true,
+    "all_row_measurement": "Complete disjoint ID ranges, four workers",
+    "native_hydra_migration_readiness_boundary_reads": true,
     "restore_seconds": 1409,
-    "verification_status": "In progress: exact counts, full byte measurement and native Hydra checks"
+    "seconds": 2549,
+    "mysql_exit": 0,
+    "gzip_exit": 0
   }
 }

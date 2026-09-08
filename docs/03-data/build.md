@@ -72,10 +72,11 @@ Download links, if you want to inspect the release before using the runner:
 | Small, 3,200 clients | [Small SQL](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-small.sql.gz) | [Checksum](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-small.sha256), [manifest](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-small.manifest.json) |
 | Full, 2,236,700 clients | [35 GiB SQL](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-35g.sql.gz) | [Checksum](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-35g.sha256), [manifest](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-35g.manifest.json) |
 
-The complete file was imported successfully into a separate Aurora MySQL test
-database using the native MySQL client. The final count, byte and Hydra checks
-are still running. See [what has been tested](../validation.md), and record your
-own restore results as you follow the steps below.
+The complete published file was restored into a separate Aurora MySQL database
+using the native MySQL client. All table counts and full byte measurements
+matched the manifest. Hydra passed its schema and readiness checks and read the
+first, middle and last sample clients. See [what has been tested](../validation.md),
+and record your own results as you follow the steps below.
 
 ## 2. Create a private MySQL client configuration
 
@@ -249,15 +250,42 @@ Do not print `.env` or full container environment in shared evidence.
 
 ## 6. Create actual OAuth state through the browser
 
-On your **authenticated workstation**, open a tunnel to the runner's local portal:
+Return to **your laptop** for this step. Leave the runner's browser terminal
+available in another tab. You will open a private connection from your laptop to
+the app on the runner. Run the command for your laptop's operating system below.
+Replace `YOUR_RUNNER_INSTANCE_ID` with the EC2 instance ID from your worksheet.
+
+### Windows: laptop PowerShell
+
+Open a new PowerShell window. Create a folder for the connection settings and
+write the JSON file shown below. It contains port numbers, not credentials.
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$HOME\hydra-lab-notes" | Out-Null
+Set-Location "$HOME\hydra-lab-notes"
+'{"portNumber":["8080"],"localPortNumber":["8080"]}' | Set-Content -Encoding ascii -Path portal-tunnel.json
+```
+
+```powershell
+aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSession --parameters file://portal-tunnel.json
+```
+
+### macOS or Linux: laptop terminal
 
 ```bash
-aws ssm start-session --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID \
+aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID \
   --document-name AWS-StartPortForwardingSession \
   --parameters '{"portNumber":["8080"],"localPortNumber":["8080"]}'
 ```
 
-Keep the terminal open. Browse to **http://localhost:8080**. Use this exact
+**Expected:** the terminal reports the session and waits for connections. Leave
+it open. If your login expired, run `aws sso login --profile hydra-lab` and try
+again. If your organization supplied another CLI login method, use that method
+and its assigned profile instead.
+
+On **the same laptop**, open a new browser tab and browse to
+**http://localhost:8080**. The app runs in AWS; the tunnel makes it reachable at
+this local address. Use this exact
 hostname because it is the configured OAuth issuer and callback URL.
 
 If the browser connection resets after an idle period, inspect this terminal.

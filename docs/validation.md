@@ -6,6 +6,7 @@ lab remains a separate build that they perform themselves.
 
 | Check | Observed result |
 |---|---|
+| Full downloadable fixture | Complete native Aurora restore passed; 2,236,700 clients; all-row measurements match its manifest |
 | Source volume | 2,172,001 clients, 37,590,483,214 logical bytes (35.0089 GiB) |
 | LOB scan | Largest value 17,260 bytes, within the 64 KiB limit |
 | RDS target | PostgreSQL 17.11; verified TLS, unencrypted connection rejection, native Hydra migrations and API CRUD passed |
@@ -34,16 +35,24 @@ The complete source-size and LOB scan took 1,049 seconds with four workers.
 ## What this does not claim
 
 The migration dataset used generated SQL inserts and actual Hydra OAuth activity.
-The complete downloadable 35 GiB fixture was then imported, unchanged, into a
-separate Aurora MySQL database. Its checksum and gzip checks passed; the native
-MySQL import and decompression both exited 0. Downloading and importing took
-23.5 minutes. The final exact counts, full byte measurement and Hydra checks
-are still running. This import is separate from the completed DMS migration;
-the two datasets have different client counts.
+After cutover, the complete published SQL fixture was separately downloaded and
+restored, unchanged, into an isolated Aurora MySQL database using the native MySQL
+client. Its checksum and gzip checks passed, both import processes exited 0,
+and all 2,236,700 client records were measured. The result was
+37,582,389,656 logical client bytes, matching the published
+manifest. All table counts matched, there were zero client/network orphans, and
+Hydra v2.2.0 passed its schema check, readiness check and first/middle/last client
+reads against the restored database.
+
+Downloading and restoring the full fixture took 23.5 minutes in this
+run; the complete restore and verification took 42.5 minutes.
+These are two separate datasets and tests. The DMS client count of 2,172,001
+and the fixture count of 2,236,700 must not be substituted for each other.
 
 AWS Console and SCT desktop GUI steps are based on official documentation. The
 executed cloud rehearsal used CLI, SQL and SCT batch operations. It does not claim
-that every Console or desktop screen was personally replayed.
+that every Console or desktop screen was personally replayed. Windows installers
+and PowerShell instructions have not been executed on a Windows computer.
 
 The dataset is deliberately dominated by repeated client metadata. It exercises
 volume, JSON, LOBs, keys, types and application continuity. It is not a measured
