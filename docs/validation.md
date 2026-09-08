@@ -33,11 +33,13 @@ The complete source-size and LOB scan took 1,049 seconds with four workers.
 
 ## What this does not claim
 
-The full AWS dataset was generated with synthetic SQL inserts, plus actual Hydra
-OAuth activity. It was **not** restored from the complete downloadable 35 GiB SQL
-fixture. That fixture was audited in full; the small fixture and high-ordinal
-boundary rows were restored and checked locally. A complete serial import of the
-large downloadable fixture remains unverified.
+The migration dataset used generated SQL inserts and actual Hydra OAuth activity.
+The complete downloadable 35 GiB fixture was then imported, unchanged, into a
+separate Aurora MySQL database. Its checksum and gzip checks passed; the native
+MySQL import and decompression both exited 0. Downloading and importing took
+23.5 minutes. The final exact counts, full byte measurement and Hydra checks
+are still running. This import is separate from the completed DMS migration;
+the two datasets have different client counts.
 
 AWS Console and SCT desktop GUI steps are based on official documentation. The
 executed cloud rehearsal used CLI, SQL and SCT batch operations. It does not claim

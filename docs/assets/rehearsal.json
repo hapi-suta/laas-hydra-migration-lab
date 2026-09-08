@@ -1,5 +1,5 @@
 {
-  "completed_at_utc": "2026-09-08T04:03:57.743564+00:00",
+  "completed_at_utc": "2026-09-08T04:39:14.333676+00:00",
   "pass": true,
   "topology": {
     "source": "Aurora MySQL 3.13.0",
@@ -16,7 +16,8 @@
     "logical_client_gib": 35.0089,
     "largest_lob_bytes": 17260,
     "profile": "Synthetic metadata-heavy client volume plus API OAuth activity",
-    "full_downloadable_fixture_import_tested": false
+    "full_downloadable_fixture_import_tested": true,
+    "full_downloadable_fixture_verification_complete": false
   },
   "sct": {
     "pass": true,
@@ -422,8 +423,15 @@
     "time": "2026-09-08T04:01:16.474Z"
   },
   "limits": [
-    "Author bulk data used generated SQL inserts. The complete downloadable 35 GiB fixture was not imported in this AWS rehearsal.",
+    "Author DMS data used generated SQL inserts. The complete downloadable fixture was separately imported into an isolated Aurora database; its final verification is still running.",
     "AWS Console and SCT desktop GUI instructions follow official documentation; they were not individually replayed through every screen.",
     "Synthetic repeated client metadata is not a measured customer workload or production performance benchmark."
-  ]
+  ],
+  "downloadable_fixture_restore": {
+    "import_completed": true,
+    "mysql_exit": 0,
+    "gzip_exit": 0,
+    "restore_seconds": 1409,
+    "verification_status": "In progress: exact counts, full byte measurement and native Hydra checks"
+  }
 }

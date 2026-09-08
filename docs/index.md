@@ -5,7 +5,7 @@ a sign-in service uses **Aurora MySQL**. The team wants to move its data to
 **RDS PostgreSQL** and check that people can still sign in.
 
 Alice will sign in before the move. She needs to keep using her existing login
-after it. Bob will sign in for the first time after the move. Your job is to make
+after it. Bob will start a new session after the move. Your job is to make
 both work, and show the team the checks that prove it.
 
 You start with an empty AWS lab. You build the old and new systems, restore the

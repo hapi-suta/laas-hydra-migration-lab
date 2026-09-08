@@ -72,9 +72,10 @@ Download links, if you want to inspect the release before using the runner:
 | Small, 3,200 clients | [Small SQL](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-small.sql.gz) | [Checksum](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-small.sha256), [manifest](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-small.manifest.json) |
 | Full, 2,236,700 clients | [35 GiB SQL](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-35g.sql.gz) | [Checksum](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-35g.sha256), [manifest](https://github.com/hapi-suta/laas-hydra-migration-lab/releases/download/restore-fixtures-v1/hydra-source-demo-35g.manifest.json) |
 
-The full file's entire SQL content was audited and its boundary rows restored
-locally. A complete serial 35 GiB Aurora restore remains unverified. See
-[what has been tested](../validation.md); record your own full restore result.
+The complete file was imported successfully into a separate Aurora MySQL test
+database using the native MySQL client. The final count, byte and Hydra checks
+are still running. See [what has been tested](../validation.md), and record your
+own restore results as you follow the steps below.
 
 ## 2. Create a private MySQL client configuration
 
@@ -182,6 +183,10 @@ docker run --rm -it --network host -e MYSQL_HISTFILE=/dev/null \
 
 In the **source MySQL prompt**, run:
 
+The metadata and logical-byte checks read the full dataset. They can take tens
+of minutes and show no intermediate output. Leave the query running. You can
+check database activity in the RDS **Monitoring** tab while you wait.
+
 ```sql
 SELECT COUNT(*) AS tables_restored FROM information_schema.tables WHERE table_schema='hydra';
 SELECT COUNT(*) AS clients, SUM(OCTET_LENGTH(metadata)) AS metadata_bytes FROM hydra_client;
@@ -195,6 +200,7 @@ SELECT COUNT(*) AS refresh_tokens FROM hydra_oauth2_refresh;
 
 **Expected:** 15 tables; clients and metadata bytes exactly match the manifest;
 1 network; 206 migration entries; zero orphan clients, signing keys and tokens.
+For the full fixture, expect **2,236,700 clients** and **36,894,597,160 metadata bytes**.
 Inspect the manifest for the other empty tables. Before starting Hydra, obtain
 an exact logical client-byte measurement using the catalog to include every column:
 
@@ -208,7 +214,8 @@ DEALLOCATE PREPARE measure_statement;
 ```
 
 Match `expected_client_logical_bytes` in the manifest. For the full exercise,
-require **at least 37,580,963,840 bytes**. This is logical column content, not
+expect **37,582,389,656 bytes**, which exceeds the required **37,580,963,840 bytes**
+(35 GiB). This is logical column content, not
 allocated Aurora volume size. Save counts and measurements without row payloads.
 Exit MySQL with `exit`.
 

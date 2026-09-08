@@ -38,6 +38,11 @@ You create the database users, download the application, write your private sett
 
 ## Restore the source yourself
 
+**Why restore?** Your new Aurora MySQL database is empty. The supplied SQL file
+puts Hydra's tables and sample data into it, so you have a working old system to
+migrate. Think of this as setting up the starting point of the Comcast story.
+Later, in task 4, DMS copies that data from MySQL into PostgreSQL.
+
 Download the supplied SQL fixture, verify its checksum and import it with the MySQL client on your runner. AWS Console creates the database; the MySQL client restores this logical SQL file.
 
 For this complete lab, choose the **35g** fixture. The small fixture is an optional rehearsal; if you use it first, follow the documented reset before restoring the full fixture. The completion checkpoint requires the full 35 GiB logical dataset, measured with SQL. The compressed download size and allocated disk space are different measurements.
