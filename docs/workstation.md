@@ -1,137 +1,131 @@
-# Install tools on your laptop
+# Install tools on your Mac
 
-**Where:** your own laptop or desktop, before connecting to any EC2 runner.
-Windows uses **PowerShell**; macOS uses **Terminal**; Linux uses its terminal app.
-Run only your operating system's installation steps.
+**Where:** your own Mac. Start before connecting to an EC2 computer.
+You need AWS CLI, the Session Manager plugin, and Windows App. The AWS CLI and
+plugin open private connections. Windows App displays your SCT computer later.
+Hydra, Docker and the databases run in AWS.
 
-Choose the instructions for your workstation. These tools let you authenticate
-and open SSM tunnels. AWS resource creation can use CloudShell, which already
-includes AWS CLI. SCT desktop installation is in [task 3](04-sct/console.md).
+## 1. Check whether your Mac uses Apple silicon or Intel
 
-## 1. Install AWS CLI v2
+Choose **Apple menu → About This Mac**. Record the macOS version and look for
+**Chip** or **Processor**. An Apple M-series chip means Apple silicon. A processor
+label containing Intel means an Intel Mac. You will choose the matching Session
+Manager download in step 3.
 
-### Windows
+## 2. Install AWS CLI v2
 
-1. Open [AWS's Windows installer instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
-2. Download the linked 64-bit MSI, open it and complete the setup wizard.
-3. Open a new PowerShell window and run `aws --version`.
+### Installer route
 
-CLI alternative in an elevated PowerShell window:
-
-```powershell
-msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
-```
-
-### macOS
-
-Download the PKG from the same AWS installation page and open the installer.
-Complete its steps, then open a new terminal. CLI alternative in Terminal:
-
-```bash
-curl -fL https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg
-```
-
-```bash
-sudo installer -pkg AWSCLIV2.pkg -target /
-```
-
-### Linux x86_64
-
-Install unzip using your distribution package manager if it is missing. In your
-own terminal:
-
-```bash
-curl -fL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip
-```
-
-```bash
-unzip awscliv2.zip
-```
-
-```bash
-sudo ./aws/install
-```
-
-For ARM64 Linux, select AWS's ARM installer on the installation page instead.
-Follow AWS's linked signature-verification procedure if your workstation policy
-requires it. Do not install a package for the wrong architecture.
-
-On every OS, verify:
+1. In Safari or Chrome, open [AWS's CLI installation page](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+2. Expand **macOS** and follow its graphical installer link to download
+   `AWSCLIV2.pkg`.
+3. Open **Finder → Downloads** and double-click the package. Continue through the
+   installer, choose **Install**, and approve it using your Mac's login when asked.
+4. Open a new Terminal: press **Command+Space**, type **Terminal**, then press
+   **Return**. Run the check below.
 
 ```bash
 aws --version
 ```
 
-Expected: **aws-cli/2**. If an older binary appears, inspect your PATH and open a
-new terminal before configuring credentials.
+**Expected:** the first part is `aws-cli/2`. The exact version numbers can differ.
+If the command is not found, close Terminal, open a new window and retry. Follow
+AWS's PATH troubleshooting if it still fails.
 
-## 2. Install the Session Manager plugin
+### Terminal alternative
 
-Open [AWS's plugin installation instructions](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
-and select your OS.
-
-- **Windows:** download the linked `SessionManagerPluginSetup.exe`, run it, accept
-  the installation directory and finish. Open a new PowerShell window.
-- **macOS:** use the signed installer linked in AWS's macOS instructions. Choose
-  the correct processor architecture, open the package and complete installation.
-- **Ubuntu/Debian:** download the architecture-specific `.deb` from the AWS page,
-  then run `sudo dpkg -i session-manager-plugin.deb` in its download directory.
-- **Amazon Linux/RHEL:** download the architecture-specific `.rpm` from the AWS
-  page, then run `sudo yum install -y session-manager-plugin.rpm` in that directory.
-
-For **Apple silicon macOS**, the signed-installer CLI path is:
+Use this instead of the graphical installation, not after it:
 
 ```bash
-curl -fL https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac_arm64/session-manager-plugin.pkg -o session-manager-plugin.pkg
+curl -fL https://awscli.amazonaws.com/AWSCLIV2.pkg -o AWSCLIV2.pkg
+sudo installer -pkg AWSCLIV2.pkg -target /
+aws --version
 ```
 
-For an **Intel Mac**, use this download instead:
+When `sudo` asks for your Mac password, typing it does not display characters.
+Press Return after entering it. This is your Mac login, not an AWS password.
 
-```bash
-curl -fL https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/session-manager-plugin.pkg -o session-manager-plugin.pkg
-```
+## 3. Install the Session Manager plugin
 
-Then install the downloaded package:
+### Installer route
 
-```bash
-sudo installer -pkg session-manager-plugin.pkg -target /
-```
-
-Ensure the executable is on PATH. Inspect `ls -l /usr/local/bin/session-manager-plugin`.
-If the link is absent, create the directory and link:
-
-```bash
-sudo mkdir -p /usr/local/bin
-```
-
-```bash
-sudo ln -s /usr/local/sessionmanagerplugin/bin/session-manager-plugin /usr/local/bin/session-manager-plugin
-```
-
-Do not overwrite an existing working link. These are the
-[AWS signed macOS installation steps](https://docs.aws.amazon.com/systems-manager/latest/userguide/install-plugin-macos-overview.html).
-
-In a new terminal, run:
+1. Open [AWS's signed macOS plugin instructions](https://docs.aws.amazon.com/systems-manager/latest/userguide/install-plugin-macos-overview.html).
+2. Choose the signed package for **Apple silicon** or **Intel**, matching step 1.
+3. Open the downloaded `.pkg` from Finder and complete the installer.
+4. Open a new Terminal window and run:
 
 ```bash
 session-manager-plugin
 ```
 
-Expected: a message that the plugin was installed successfully. If not found,
-check AWS's documented installation path and PATH guidance for your OS. The
-plugin is required on the workstation that opens the tunnel, not just the runner.
+**Expected:** a message saying the plugin was installed successfully. It is a
+connection helper; it does not open a desktop or the Hydra app by itself.
 
-## 3. Authenticate and verify the account
+### Terminal alternative
 
-Return to [laptop sign-in, step 3](start.md#3-sign-in-on-your-workstation-for-the-private-app-connection) for SSO
-profile setup, browser authentication and STS identity verification. Keep the
-same account and us-east-1 region for the whole exercise. Do not place long-lived
-access keys in the downloaded project.
+For **Apple silicon**, download:
 
-## 4. Verify the tunnel prerequisites
+```bash
+curl -fL https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac_arm64/session-manager-plugin.pkg -o session-manager-plugin.pkg
+```
 
-After creating your runner, use the exact [portal tunnel command](03-data/build.md#6-create-actual-oauth-state-through-the-browser).
-The runner must be SSM Online. A successful session should print **Waiting for
-connections**. Keep it open and browse to **http://localhost:8080**.
-If the port is occupied, stop your own conflicting local service before retrying;
-changing only the browser port would break the configured OAuth callback URL.
+For **Intel**, use this download instead:
+
+```bash
+curl -fL https://s3.amazonaws.com/session-manager-downloads/plugin/latest/mac/session-manager-plugin.pkg -o session-manager-plugin.pkg
+```
+
+Then install the package you selected:
+
+```bash
+sudo installer -pkg session-manager-plugin.pkg -target /
+session-manager-plugin
+```
+
+If the command is not found, inspect the link in Terminal:
+
+```bash
+ls -l /usr/local/bin/session-manager-plugin
+```
+
+If that link is absent, follow AWS's installation path and create the link:
+
+```bash
+sudo mkdir -p /usr/local/bin
+sudo ln -s /usr/local/sessionmanagerplugin/bin/session-manager-plugin /usr/local/bin/session-manager-plugin
+session-manager-plugin
+```
+
+A working link must not be replaced. The plugin must be installed on this Mac,
+which opens the private connections.
+
+## 4. Install Windows App for the SCT desktop
+
+1. Open the **Mac App Store**. Search for **Windows App** and confirm the publisher
+   is Microsoft. Install it.
+2. Open Windows App. Finish or skip its introductory tour.
+3. Leave it ready. You have no SCT computer to connect to yet. In task 3 you will
+   create Windows EC2 and add it using **Devices → + → Add PC**.
+
+[Microsoft's Mac connection instructions](https://learn.microsoft.com/en-us/windows-app/get-started-connect-devices-desktops-apps).
+
+## 5. Sign in to AWS CLI on your Mac
+
+Return to [Mac sign-in, step 3](start.md#3-sign-in-on-your-workstation-for-the-private-app-connection).
+Configure your assigned login and verify the account ID. A signed-in AWS browser
+tab does not automatically sign in your Mac Terminal.
+
+**Ready to continue:** `aws --version` shows version 2, the Session Manager plugin
+check succeeds, Windows App opens, and your CLI account matches the assigned AWS
+Console account. Continue with the worksheet and task 1.
+
+## Later: understand the two private connections
+
+| Connection opened in Mac Terminal | What you open on the Mac | When it becomes useful |
+|---|---|---|
+| Port 8080 to the Linux runner | Browser → http://localhost:8080 | Task 2, after starting Hydra and the portal |
+| Port 13389 to the Windows SCT instance | Windows App → 127.0.0.1:13389 | Task 3, after creating Windows EC2 |
+
+Keep each connection's Terminal window open while using it. A connection ending
+or timing out does not delete or stop the EC2 computer. The exact commands and
+expected messages appear in their tasks.

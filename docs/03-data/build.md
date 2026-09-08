@@ -255,7 +255,16 @@ available in another tab. You will open a private connection from your laptop to
 the app on the runner. Run the command for your laptop's operating system below.
 Replace `YOUR_RUNNER_INSTANCE_ID` with the EC2 instance ID from your worksheet.
 
-### Windows: laptop PowerShell
+### On your Mac: Terminal
+
+```bash
+aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["8080"],"localPortNumber":["8080"]}'
+```
+
+<details class="instructions" markdown="1">
+<summary>Alternative for a Windows laptop: PowerShell</summary>
 
 Open a new PowerShell window. Create a folder for the connection settings and
 write the JSON file shown below. It contains port numbers, not credentials.
@@ -270,13 +279,7 @@ Set-Location "$HOME\hydra-lab-notes"
 aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSession --parameters file://portal-tunnel.json
 ```
 
-### macOS or Linux: laptop terminal
-
-```bash
-aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID \
-  --document-name AWS-StartPortForwardingSession \
-  --parameters '{"portNumber":["8080"],"localPortNumber":["8080"]}'
-```
+</details>
 
 **Expected:** the terminal reports the session and waits for connections. Leave
 it open. If your login expired, run `aws sso login --profile hydra-lab` and try

@@ -1,7 +1,8 @@
 # Assess the schema with the SCT GUI
 
-**Environment:** AWS Console for endpoint/secret lookup, AWS SCT desktop GUI on a
-supported Windows or Linux workstation, and private database connectivity.
+**Environment:** AWS Console for endpoint/secret lookup, AWS SCT desktop GUI on
+your Windows EC2 desktop opened from the Mac, and private database connectivity.
+Create that desktop with the [Mac-to-Windows setup lesson](mac-desktop.md) first.
 **CLI counterpart:** [SCT and schema preparation](build.md).
 
 SCT's desktop GUI is a separate application. **DMS Schema Conversion** in the AWS
@@ -12,15 +13,19 @@ assessment and compares it with Hydra's native PostgreSQL schema.
 ## 1. Install SCT and the JDBC drivers yourself
 
 1. Open the [AWS SCT installation procedure](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.Procedure.html).
-2. On a supported Windows workstation, download the Windows ZIP, extract it,
-   launch the MSI, accept the license and complete the installer. On Ubuntu or
-   Fedora, download the matching package and use the exact dpkg/rpm installation
-   command on that AWS page. Native macOS is not on the desktop support list;
-   use the [runner CLI lesson](build.md) or a supported workstation.
+2. In Edge inside your Windows EC2 desktop, download the Windows ZIP. In File
+   Explorer, open Downloads, right-click the ZIP and choose **Extract All**. Open
+   the extracted folder and locate its MSI. These actions happen on Windows;
+   your Mac displays that desktop.
 3. Follow [AWS package verification](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.InstallValidation.html).
-   For Windows, inspect the MSI digital signature before installing. Record the
-   installed SCT build from **Help → About**.
-4. Download the [MySQL Connector/J JAR](https://repo.maven.apache.org/maven2/com/mysql/mysql-connector-j/26.7.0/mysql-connector-j-26.7.0.jar) and [PostgreSQL JDBC JAR](https://jdbc.postgresql.org/download/postgresql-42.7.13.jar) to a folder on your workstation. Keep the `.jar` files; SCT opens them directly.
+   Right-click the MSI → **Properties → Digital Signatures**. Select the Amazon
+   Web Services signer and open **Details**; require that the signature is OK.
+   Then launch the MSI, read the license and complete the installer. Open SCT
+   from its desktop shortcut. Allow a few minutes for the first launch; do not
+   open more copies while it starts. If it offers **Get started with DMS SC**,
+   choose **Not now** to continue with this SCT desktop exercise. Record the
+   build from **Help → About**.
+4. Download the [MySQL Connector/J JAR](https://repo.maven.apache.org/maven2/com/mysql/mysql-connector-j/26.7.0/mysql-connector-j-26.7.0.jar) and [PostgreSQL JDBC JAR](https://jdbc.postgresql.org/download/postgresql-42.7.13.jar) to a folder inside Windows. Keep the `.jar` files; SCT opens them directly.
 5. In **SCT → Settings → Global settings → Drivers**, choose the MySQL and
    PostgreSQL driver files, then save. Record both driver versions.
 6. In RDS, record your source cluster writer endpoint and target DB instance endpoint. The comparison target
@@ -87,18 +92,20 @@ earlier attempt, inspect the existing store rather than replacing it blindly.
 [AWS RDS CA bundles](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.SSL.html).
 
 On the runner, run `base64 -w0 runtime/sct/rds-trust.jks`. Copy the single line
-into a local file named `rds-trust.b64` using Notepad. In **Windows PowerShell**, in
-that file's directory, decode it:
+into a file named `rds-trust.b64` inside the Windows desktop. Open **Windows
+PowerShell** there and run:
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$HOME\HydraLab" | Out-Null
+Set-Location "$HOME\HydraLab"
+notepad rds-trust.b64
+```
+
+In Notepad, paste the copied base64 line, save the file and close Notepad. Back
+in that same PowerShell window, decode it:
 
 ```powershell
 [IO.File]::WriteAllBytes("$PWD\rds-trust.jks",[Convert]::FromBase64String((Get-Content .\rds-trust.b64 -Raw)))
-```
-
-On **Ubuntu or Fedora desktop**, save the copied line as `rds-trust.b64` in your
-local notes folder using a text editor. Open a terminal in that folder and run:
-
-```bash
-base64 --decode rds-trust.b64 > rds-trust.jks
 ```
 
 Record the trust-store password you chose. In SCT **Settings → Global settings →
@@ -106,80 +113,22 @@ Security → Trust store → Select existing trust store**, add/import your `rds
 password. Choose this store in each connection's SSL settings.
 [AWS SCT encrypted RDS connections](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Source.Encrypt.RDS.html).
 
-Return to the **computer running SCT desktop**. Open the database tunnels there,
-so SCT on that computer can reach the private databases. Use your worksheet to
-replace the runner instance ID, source writer endpoint and target endpoint.
-If this is a different computer from your original laptop, first complete the
-[CLI/plugin installation and sign-in](../workstation.md) on this computer too.
-Use the assigned CLI profile if your organization supplied a login method other
-than `hydra-lab` SSO.
+### Windows EC2: connect directly through the lab networks
 
-### Windows: prepare the files in PowerShell
-
-Open PowerShell. Create the notes folder and both JSON files before starting a
-connection. Replace the endpoint placeholders inside the quoted JSON first.
-
-```powershell
-New-Item -ItemType Directory -Force -Path "$HOME\hydra-lab-notes" | Out-Null
-Set-Location "$HOME\hydra-lab-notes"
-'{"host":["YOUR_SOURCE_WRITER_ENDPOINT"],"portNumber":["3306"],"localPortNumber":["13306"]}' | Set-Content -Encoding ascii -Path source-tunnel.json
-'{"host":["YOUR_TARGET_INSTANCE_ENDPOINT"],"portNumber":["5432"],"localPortNumber":["15432"]}' | Set-Content -Encoding ascii -Path target-tunnel.json
-```
-
-In that window, start the source connection:
-
-```powershell
-aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters file://source-tunnel.json
-```
-
-Open a **second PowerShell window**, enter the same folder, and start the target
-connection. Keep the first window open.
-
-```powershell
-Set-Location "$HOME\hydra-lab-notes"
-aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters file://target-tunnel.json
-```
-
-### Ubuntu or Fedora desktop: two terminal windows
-
-Run the source command in one authenticated terminal and the target command in a
-second terminal:
-
-```bash
-aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["YOUR_SOURCE_WRITER_ENDPOINT"],"portNumber":["3306"],"localPortNumber":["13306"]}'
-```
-
-```bash
-aws ssm start-session --profile hydra-lab --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["YOUR_TARGET_INSTANCE_ENDPOINT"],"portNumber":["5432"],"localPortNumber":["15432"]}'
-```
-
-**Expected on either OS:** each terminal reports a session and waits for
-connections. Keep both open while using SCT.
-Free local ports 13306/15432 first if already occupied.
-[AWS remote-host port forwarding](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-sessions-start.html).
-
-For verified hostnames, edit your **workstation** hosts file as administrator:
-Windows `C:\Windows\System32\drivers\etc\hosts` with elevated Notepad, or
-Linux `/etc/hosts` with `sudo vi /etc/hosts`. Add these two lines with the exact
-native endpoint names from RDS:
-
-```text
-127.0.0.1 YOUR_SOURCE_WRITER_ENDPOINT
-127.0.0.1 YOUR_TARGET_INSTANCE_ENDPOINT
-```
-
-SCT then uses those native names on local ports 13306 and 15432. The runner still
-resolves the real endpoints in AWS for the remote side of each tunnel. Remove
-these two workstation entries after SCT practice. Do not change Route 53 records
-or disable certificate checking to resolve a hostname mismatch.
+For the Mac route, SCT runs on your Windows EC2 instance in the source VPC.
+Use the native Aurora writer hostname on **3306**, and the native RDS PostgreSQL
+hostname on **5432**. Select **sct_compare** as the PostgreSQL database. Keep the
+RDS trust store and certificate checks enabled. Continue with step 3 below.
+Your Mac-to-Windows desktop connection stays open; you do not need a separate
+database tunnel or hosts-file edits for this EC2 route.
 
 ## 3. Create the project and source connection
 
 1. In SCT choose **File → New project**, name it with the lab prefix, and save it
    in your private working directory.
 2. Choose **Add source → MySQL → Next**.
-3. Enter a connection name such as `HYDRA_MYSQL`. Use the native source hostname
-   and the applicable direct/tunnel port.
+3. Enter a connection name such as `HYDRA_MYSQL`. For the Windows EC2 route,
+   use your native source writer hostname and port **3306**.
 4. Enter the dedicated `sct_reader` credential you created in task 2.
    It has SELECT and SHOW VIEW access for this isolated lab. Do not use the DMS
    replication user as a substitute for SCT's required privileges.
@@ -194,8 +143,8 @@ or disable certificate checking to resolve a hostname mismatch.
 
 1. Choose **Add target → Amazon RDS for PostgreSQL**.
    [AWS SCT RDS PostgreSQL walkthrough](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_GettingStarted.SCT.html).
-2. Enter a distinct connection name such as `SCT_COMPARE`, native target DB instance
-   hostname, direct/tunnel port, and database **sct_compare**.
+2. Enter a distinct connection name such as `SCT_COMPARE`, your native target DB
+   instance hostname, port **5432** for Windows EC2, and database **sct_compare**.
 3. Use the lab's schema-owner credentials and the JDBC driver's verified TLS
    settings/trust store. This role must be able to create objects in sct_compare.
 4. Test the connection and connect. Inspect the target tree to ensure it is the

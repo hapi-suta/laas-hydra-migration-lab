@@ -40,9 +40,10 @@ CLI process informs this implementation.
 The migration is **Aurora MySQL to Amazon RDS for PostgreSQL**, matching the
 customer's corrected requirement and original diagram. The practice target is a
 Single-AZ PostgreSQL 17.x DB instance. Students discover an available minor
-version and class in their region. The earlier engineering target used Aurora
-PostgreSQL; its provisioning, SCT and DMS endpoint results do not establish RDS
-target compatibility. Re-run those checkpoints against the new target.
+version and class in their region. The completed AWS rehearsal used an
+**RDS PostgreSQL 17.11 DB instance**. SCT schema checks, DMS full load and CDC,
+row validation, cutover and application checks passed against that target. See
+[the validation report](validation.md) for the measured results and limits.
 [AWS RDS PostgreSQL creation](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_CreateDBInstance.html)
 and [SCT RDS PostgreSQL target selection](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_GettingStarted.SCT.html).
 
@@ -106,8 +107,7 @@ and [monitoring](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Monitorin
 ## Costs and evidence limits
 
 Estimate Aurora MySQL and RDS PostgreSQL separately in the
-[AWS Pricing Calculator](https://calculator.aws/). The old two-Aurora-writer
-estimate does not apply to this topology. Include the RDS instance deployment
+[AWS Pricing Calculator](https://calculator.aws/). Include the RDS instance deployment
 option, gp3 allocated storage, any additional IOPS/throughput, backups, DMS,
 runner, interface endpoints and IPv4. Autoscaling can increase allocated storage
 and cost; the worksheet records both its initial value and ceiling. A deadline

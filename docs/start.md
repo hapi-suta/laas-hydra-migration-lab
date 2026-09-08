@@ -1,7 +1,7 @@
-# Start here: use your laptop
+# Start here: use your Mac
 
-**Start on your own laptop or desktop computer.** In this guide, **workstation**
-means that computer. You will use its browser to create the lab in AWS. Later,
+**Start on your Mac.** Open Safari or Chrome and keep this guide in one tab.
+In this guide, **workstation** means your Mac. You will use its browser to create the lab in AWS. Later,
 you will open a terminal connected to an EC2 machine in AWS and run the app and
 database commands there.
 
@@ -19,15 +19,17 @@ Have these details from your instructor or AWS administrator:
 If those details have not been supplied, get them before creating resources.
 The public guide and lab downloads do not require a GitHub account.
 
-## Choose the computer for the SCT desktop exercise
+## How SCT works when you have a Mac
 
-The browser and AWS CLI parts can start on Windows, macOS or Linux. For the SCT
-desktop exercise in task 3, arrange a **64-bit Windows, Ubuntu or Fedora desktop**.
-Windows lets you follow the PowerShell and SCT desktop steps on one computer.
-AWS does not list a native macOS SCT desktop app. If you use a Mac, arrange access
-to a supported desktop for that exercise, or choose the clearly marked SCT CLI
-alternative on your AWS runner.
-[AWS SCT supported operating systems](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.html).
+You will stay on your Mac throughout the lab. In task 3, you will create a
+**Windows EC2 desktop** and open it using **Windows App on your Mac**. SCT and
+its JDBC drivers are installed inside that Windows computer. You will create it
+yourself with the [complete Console-first steps](04-sct/mac-desktop.md), then
+copy your assessment and SQL back to a folder on your Mac.
+
+AWS provides SCT desktop installers for Windows and Linux. Follow the
+[AWS SCT installation documentation](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.html) inside your Windows EC2 desktop.
+The SCT command line on the Linux runner remains an alternative exercise.
 
 ## Which computer does each job?
 
@@ -36,7 +38,7 @@ alternative on your AWS runner.
 | Laptop browser | Read this guide and use the AWS Console | Start here and task 1 |
 | Laptop terminal | Sign in with AWS CLI and keep private connections open | Setup below, then tasks 2 and 3 |
 | EC2 runner in AWS | Download the lab files and data, run Hydra and run SQL clients | Create it in task 1; use it from task 2 |
-| SCT desktop on your supported computer | View the schema assessment and conversion | Task 3 |
+| Windows App on your Mac → Windows EC2 desktop | Install SCT there, then view the assessment and conversion | Task 3 |
 | AWS DMS service | Copy rows between the two AWS databases | Task 4 |
 | Laptop browser again | Sign in as Alice and Bob and check the app | Tasks 2, 4, 5 and 6 |
 
@@ -85,22 +87,20 @@ The returned account must match the Console. CloudShell is already authenticated
 
 ## 2. Install workstation tools
 
-On **your laptop**, follow the [numbered installation steps](workstation.md) for
-your operating system. Install and verify **AWS CLI v2** and the **Session Manager
+On **your Mac**, follow the [numbered Mac installation steps](workstation.md). Install and verify **AWS CLI v2** and the **Session Manager
 plugin** now. Return here for step 3. Install SCT and its JDBC drivers when you
-reach task 3; confirm access to a supported desktop now.
+reach task 3; that task creates your Windows desktop in AWS.
 
 | Tool | Installation and check | Used for |
 |---|---|---|
 | AWS CLI v2 | Follow the OS-specific installer in [AWS CLI installation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html); open a new terminal; `aws --version` must show aws-cli/2 | SSM tunnel and CLI alternative |
-| Session Manager plugin | Select your OS in [AWS plugin installation](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html); run `session-manager-plugin` | Private portal and database tunnels |
+| Session Manager plugin | Select your OS in [AWS plugin installation](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html); run `session-manager-plugin` | Private portal and Windows desktop connections |
 | AWS SCT desktop | Follow the complete [SCT installation/connection lesson](04-sct/console.md) | Schema assessment and conversion GUI |
 | MySQL and PostgreSQL JDBC | Download the versions/URLs shown in the SCT lesson; select both JARs in SCT | Database connectivity |
 
-The native AWS CLI blocks use **Bash** (CloudShell or Linux/macOS terminal).
-For SCT desktop, AWS currently lists **Windows, Fedora and Ubuntu 64-bit**.
-Use a supported desktop for the GUI route. A Mac can use the documented SCT CLI
-on the runner, but this is a separate interface, not a claim of native Mac GUI support.
+The AWS CLI commands for your Mac run in Terminal. The AWS resource-creation
+alternative uses Bash in CloudShell. PowerShell blocks in the SCT lesson run
+inside the remote Windows desktop, unless explicitly labelled for another laptop.
 
 You install Docker, Python and the application on your newly created runner in
 task 2. A preinstalled instructor workstation, Terraform state or runtime
@@ -113,9 +113,9 @@ Even on the Console path, your browser needs a Session Manager tunnel to reach
 the private app later. A tunnel forwards a port on your laptop to the app in AWS.
 Your browser's AWS sign-in does not automatically sign in the CLI on your laptop.
 
-On Windows, open **Start**, type **PowerShell**, and open it. On macOS, open
-**Terminal** from Applications → Utilities. On Linux, open your terminal app.
-The three commands below work in those terminals. Run one at a time.
+On your Mac, press **Command+Space**, type **Terminal**, and press **Return**.
+This opens a command window on your Mac. Run the three commands below one at a
+time. You do not need a connection to an EC2 runner yet.
 
 With IAM Identity Center, on **your laptop**:
 
@@ -133,8 +133,7 @@ aws sts get-caller-identity --profile hydra-lab
 
 Enter the SSO start URL, SSO region, account and role from your organization's
 access portal. Choose us-east-1 as the default service region. Follow the browser
-sign-in prompt. For Bash terminals set `export AWS_PROFILE=hydra-lab`; in PowerShell
-set `$env:AWS_PROFILE="hydra-lab"`. Do not invent SSO settings.
+sign-in prompt. In your Mac Terminal, run `export AWS_PROFILE=hydra-lab`. Do not invent SSO settings.
 
 **Expected:** the last command returns JSON containing your assigned 12-digit
 `Account`. Compare it with the AWS Console account you recorded in step 1.
@@ -175,7 +174,8 @@ region and record a cleanup date. A tag or closed browser does not stop billing.
 | Name in the guide | Where commands run |
 |---|---|
 | CloudShell / AWS operator | AWS CLI control commands using your Console identity |
-| Workstation | SCT desktop and local browser; AWS CLI SSM tunnels |
+| Workstation / Mac | Local browser, Terminal, AWS CLI connections and Windows App |
+| Windows SCT desktop | Your separate Windows EC2 computer; SCT GUI and its JDBC drivers |
 | Runner / ec2-user | Your EC2 machine, /opt/hydra-practice; SQL clients and application containers |
 | MySQL prompt | Commands after opening the source mysql client |
 | PostgreSQL prompt | Commands after opening psql against the stated target database |

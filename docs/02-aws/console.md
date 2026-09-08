@@ -118,7 +118,7 @@ check the parameter status instead of assuming it applied immediately.
 Open **RDS → Databases → Create database → Standard create** twice. Apply these
 settings; expand **Connectivity** and **Additional configuration** where needed.
 
-| Field | Source | Target |
+| Field | Source: Aurora MySQL | Target: RDS PostgreSQL |
 |---|---|---|
 | Engine | Aurora, MySQL compatible | PostgreSQL |
 | Version | 8.0.mysql_aurora.3.13.0 if still available | Select an available RDS PostgreSQL 17.x minor version; record it |
@@ -136,7 +136,8 @@ settings; expand **Connectivity** and **Additional configuration** where needed.
 | Backup retention | 3 days | 3 days |
 | Deletion protection | Enabled | Enabled |
 
-For the target, choose **PostgreSQL**, not **Aurora (PostgreSQL Compatible)**.
+For the target, choose the **PostgreSQL** engine tile. You are creating an
+**Amazon RDS for PostgreSQL DB instance**.
 Under **Availability and durability**, choose the Single-AZ DB instance option.
 For a separate availability exercise, choose **Multi-AZ DB instance deployment**;
 the three-instance Multi-AZ DB cluster option is outside this baseline.

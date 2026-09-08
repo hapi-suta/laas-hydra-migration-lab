@@ -1,4 +1,4 @@
-# 5. Cut over to PostgreSQL
+# 5. Cut over to RDS PostgreSQL
 
 **Result:** Hydra serves the same portal using the migrated RDS PostgreSQL data.
 

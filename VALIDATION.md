@@ -51,8 +51,11 @@ and the fixture count of 2,236,700 must not be substituted for each other.
 
 AWS Console and SCT desktop GUI steps are based on official documentation. The
 executed cloud rehearsal used CLI, SQL and SCT batch operations. It does not claim
-that every Console or desktop screen was personally replayed. Windows installers
-and PowerShell instructions have not been executed on a Windows computer.
+that every Console or desktop screen was personally replayed. A separate Windows
+Server 2022 EC2 check verified the signed SCT 1.0.677 MSI installation, JDBC
+downloads, PowerShell TCP checks to both private databases, and Mac Windows App
+login through Session Manager and SCT desktop startup. The complete GUI conversion and Mac report
+export have not been replayed end to end.
 
 The dataset is deliberately dominated by repeated client metadata. It exercises
 volume, JSON, LOBs, keys, types and application continuity. It is not a measured

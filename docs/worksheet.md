@@ -7,7 +7,7 @@ variables from these entries with `export VARIABLE=YOUR_RECORDED_VALUE`.
 
 | Variable | What to record | Your value |
 |---|---|---|
-| Laptop / SCT desktop | Your laptop OS and the Windows/Ubuntu/Fedora desktop you will use for SCT | |
+| Laptop / SCT desktop | Your Mac model/macOS version and your Windows EC2 SCT desktop | |
 | AWS sign-in | Assigned portal link, account label and training role; no passwords | |
 | CLI login | Approved login method; for SSO, its start URL and SSO Region | |
 | LAB_ACCOUNT | STS Account ID | |
@@ -29,6 +29,8 @@ variables from these entries with `export VARIABLE=YOUR_RECORDED_VALUE`.
 | Target storage / availability | Allocated GiB, gp3, Single-AZ or Multi-AZ instance | |
 | Source / target master secret | RDS-managed secret ARNs only | |
 | RUNNER_ID | EC2 instance ID | |
+| SCT_INSTANCE_ID / SCT_KEY_NAME | Windows EC2 instance ID and its dedicated key-pair name; no private key contents | |
+| SCT root volume / Mac evidence | Windows root EBS ID, DeleteOnTermination and your Mac evidence-folder path | |
 | Runner root volume | EBS volume ID and DeleteOnTermination | |
 | SECRETS_VPCE | Secrets Manager interface endpoint ID | |
 | DMS_VERSION / DMS_ARN | Version and replication-instance ARN | |

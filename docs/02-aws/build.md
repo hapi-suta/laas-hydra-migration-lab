@@ -378,7 +378,7 @@ export PG_VERSION=YOUR_SELECTED_POSTGRES_17_VERSION
 
 The MySQL value is the earlier source test version. For PG_VERSION, replace the
 placeholder with an exact 17.x version from the **postgres** engine list above.
-Record it in your worksheet. Do not copy an Aurora PostgreSQL version assumption.
+Record this RDS PostgreSQL version in your worksheet.
 Check that `db.r6g.large` is orderable for each selected version:
 
 ```bash

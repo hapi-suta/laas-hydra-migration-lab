@@ -26,6 +26,10 @@ Stop the practice containers on the runner:
 docker compose --profile target stop
 ```
 
+Before deleting the lab networks or runner role, complete the [Windows SCT
+cleanup](../04-sct/mac-desktop.md#7-pause-or-remove-the-windows-desktop), including
+its root volume and dedicated key pair. Confirm the reports open on your Mac.
+
 ## 2. Verify identity and restore your cleanup worksheet
 
 In CloudShell, set `AWS_REGION`, `LAB` and the IDs recorded during Modules 02/05.

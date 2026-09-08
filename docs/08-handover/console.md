@@ -42,6 +42,12 @@ service roles or other learners' instances.
 
 ## 5. Remove the databases and runner
 
+First finish the [Windows SCT desktop cleanup](../04-sct/mac-desktop.md#7-pause-or-remove-the-windows-desktop).
+Confirm your SCT reports are readable on the Mac. Account for the Windows
+instance, its root volume and dedicated key pair before removing the shared
+runner security group, subnet or IAM profile.
+
+
 1. In **RDS → Databases**, select the **source Aurora cluster → Modify**. Clear
    deletion protection and apply. Separately select the **target PostgreSQL DB
    instance → Modify**, clear deletion protection and apply. Verify both changes.

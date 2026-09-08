@@ -460,5 +460,16 @@
     "seconds": 2549,
     "mysql_exit": 0,
     "gzip_exit": 0
+  },
+  "windows_sct_setup": {
+    "os": "Windows Server 2022",
+    "sct_version": "1.0.677",
+    "msi_signature": "Valid",
+    "msi_exit": 0,
+    "source_tcp": true,
+    "target_tcp": true,
+    "mac_rdp_login_verified": true,
+    "gui_conversion_and_mac_report_export_verified": false,
+    "desktop_startup_verified": true
   }
 }

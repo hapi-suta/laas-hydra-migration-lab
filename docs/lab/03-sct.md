@@ -12,9 +12,22 @@ A table defines the fields in each record and the types of values they accept. M
 
 The portal still uses MySQL throughout this task. Open Alice's **Protected account** before and after your SCT work. Both times it should show **Verified by source**. Creating a target table does not switch the application.
 
+## Open the SCT desktop from your Mac
+
+Your Mac remains your main computer. In this task, create a temporary Windows
+EC2 instance and open its desktop with Windows App on your Mac. Install and use
+SCT inside that Windows desktop. The Linux runner keeps running Hydra.
+
+<details class="instructions" markdown="1" open>
+<summary>Mac setup: create Windows EC2, connect, save reports and clean up</summary>
+
+{{lesson:../04-sct/mac-desktop.md}}
+
+</details>
+
 ## Run SCT
 
-Start with the SCT desktop instructions below. SCT is a separate application you install; it is not a page inside the AWS Console. The SCT command-line option follows. Use the same source database and the same comparison target in either route.
+After the Windows desktop is ready, follow the SCT desktop instructions below. SCT is a separate application you install; it is not a page inside the AWS Console. The SCT command-line option follows. Use the same source database and the same comparison target in either route.
 
 <details class="instructions" markdown="1" open>
 <summary>SCT desktop: install, connect, assess and export the conversion</summary>

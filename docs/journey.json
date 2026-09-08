@@ -17,7 +17,7 @@
   },
   {
     "page": "lab/05-cutover.md",
-    "title": "5. Cut over to PostgreSQL"
+    "title": "5. Cut over to RDS PostgreSQL"
   },
   {
     "page": "lab/06-prove.md",
