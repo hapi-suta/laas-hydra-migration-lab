@@ -1,8 +1,8 @@
 # Assess the schema using the AWS SCT CLI
 
 **Where:** EC2 runner, Session Manager, ec2-user, `/opt/hydra-practice`.
-**Before starting:** restore the source and exercise the application in Module 03.
-The PostgreSQL databases `hydra` and `sct_compare` were created by you in Module 02.
+**Before starting:** restore the source and exercise the application in task 2.
+The PostgreSQL databases `hydra` and `sct_compare` were created by you in task 2.
 Keep target Hydra stopped. [Desktop GUI alternative](console.md).
 
 SCT produces the assessment and conversion. You examine its output in
@@ -142,7 +142,7 @@ LoadTrustStore -name: 'RDS' -password: 'YOUR_TRUST_STORE_PASSWORD' -file: '/opt/
 /
 ```
 
-Use the `sct_reader` password you created in Module 02 and your native writer
+Use the `sct_reader` password you created in task 2 and your native writer
 endpoint. Runner connections use direct ports, without workstation tunnels:
 
 ```text
@@ -150,10 +150,12 @@ AddSource -name: 'MYSQL' -vendor: 'MYSQL' -host: 'YOUR_SOURCE_WRITER_ENDPOINT' -
 /
 ```
 
-Use the target `hydra` role password from Module 02. Check the database field:
+Use the target `hydra` role password from task 2. The SCT CLI vendor token
+for this RDS PostgreSQL connection is `POSTGRESQL`. Set the database to
+`sct_compare`, on the RDS instance you created:
 
 ```text
-AddTarget -name: 'POSTGRESQL' -vendor: 'AURORA_POSTGRESQL' -host: 'YOUR_TARGET_WRITER_ENDPOINT' -port: '5432' -database: 'sct_compare' -user: 'hydra' -password: 'YOUR_POSTGRES_HYDRA_PASSWORD' -useSSL: 'true' -requireSSL: 'true' -verifyServerCertificate: 'true' -trustServerCertificate: 'false' -trustStoreAlias: 'RDS'
+AddTarget -name: 'POSTGRESQL' -vendor: 'POSTGRESQL' -host: 'YOUR_TARGET_INSTANCE_ENDPOINT' -port: '5432' -database: 'sct_compare' -user: 'hydra' -password: 'YOUR_POSTGRES_HYDRA_PASSWORD' -useSSL: 'true' -requireSSL: 'true' -verifyServerCertificate: 'true' -trustServerCertificate: 'false' -trustStoreAlias: 'RDS'
 /
 ```
 
@@ -234,10 +236,10 @@ warning does not mean otherwise. Do not bulk-replace every JSON or timestamp.
 
 Save the reviewed SQL as `evidence/sct/reviewed.sql`. Inspect every database/schema
 name and any DROP statements. It must create objects only in the comparison
-database. Reconnect with the PostgreSQL client from Module 02, changing only
+database. Reconnect with the PostgreSQL client from task 2, changing only
 `dbname=hydra` to `dbname=sct_compare`, using the `hydra` role and its password.
 Bind the evidence directory so psql can read the reviewed SQL. In a fresh shell,
-first set `export TARGET_HOST=YOUR_TARGET_WRITER_ENDPOINT` from your worksheet:
+first set `export TARGET_HOST=YOUR_TARGET_INSTANCE_ENDPOINT` from your worksheet:
 
 ```bash
 docker run --rm -it --network host -e PSQL_HISTORY=/dev/null \
@@ -250,15 +252,18 @@ In **psql**:
 ```sql
 SELECT current_database(),current_user;
 \set ON_ERROR_STOP on
+BEGIN;
 \i /review/reviewed.sql
+COMMIT;
 \dn
 \dt hydra.*
 ```
 
 Require `sct_compare` before executing the file. If an error occurs, stop and
 resolve its action item; do not declare the schema converted because some tables
-exist. Save the error and corrected SQL. Comparison application is a learner
-exercise; it has not been fully replayed in the engineering cloud run.
+exist. Run `ROLLBACK;` after an error before retrying the corrected file. Save the
+error and corrected SQL. The reviewed RDS rehearsal passed after the
+[documented export repairs](schema-checks.md#apply-the-corrections-found-in-the-rds-rehearsal).
 
 Finish the [native schema, LOB and empty-target checks](schema-checks.md). The
 real DMS target stays `hydra.public`. Continue to [DMS setup](../05-dms/build.md).

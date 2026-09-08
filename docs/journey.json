@@ -1,0 +1,26 @@
+[
+  {
+    "page": "lab/01-build.md",
+    "title": "1. Build the source and target"
+  },
+  {
+    "page": "lab/02-restore.md",
+    "title": "2. Restore data and run Hydra"
+  },
+  {
+    "page": "lab/03-sct.md",
+    "title": "3. Assess the schema with SCT"
+  },
+  {
+    "page": "lab/04-dms.md",
+    "title": "4. Migrate with DMS"
+  },
+  {
+    "page": "lab/05-cutover.md",
+    "title": "5. Cut over to PostgreSQL"
+  },
+  {
+    "page": "lab/06-prove.md",
+    "title": "6. Prove it works and clean up"
+  }
+]

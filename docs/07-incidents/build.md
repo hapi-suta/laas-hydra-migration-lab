@@ -18,7 +18,7 @@ curl -fsS http://127.0.0.1:4445/health/ready
 ```
 
 Confirm source readiness and a working browser login/refresh. In CloudShell,
-record the running task and successful endpoint tests using Module 05's commands.
+record the running task and successful endpoint tests using task 4's commands.
 
 ## 2. Stop the gateway and diagnose the symptom
 
@@ -60,7 +60,7 @@ Resume within your 72-hour binlog-retention window:
 aws dms start-replication-task --replication-task-arn "$TASK_ARN" --start-replication-task-type resume-processing
 ```
 
-Use Module 05's task/statistics commands. Require running, arrival of the row,
+Use task 4's task/statistics commands. Require running, arrival of the row,
 healthy validation and drained backlog. Finish the update/delete exercise.
 `resume-processing` uses the saved checkpoint. `reload-target` restarts loading
 and is not a substitute on a populated DO_NOTHING target.
@@ -121,3 +121,97 @@ load and CDC. Record the retention lesson and actual recovery time.
 
 **Evidence per case:** healthy baseline, symptom, cause, exact correction, restored
 application/CDC behavior and elapsed time.
+
+## 6. Recover a failed UUID CDC test in this disposable lab
+
+Use this only **before target Hydra has ever served the application**, while
+MySQL is the complete source of truth. It discards the target's incomplete copy.
+It is not a recovery procedure for a PostgreSQL system that has accepted writes.
+Keep source Hydra and the portal running; keep target Hydra stopped.
+
+The author found this failure: full load completed, but a CDC insert failed with
+PostgreSQL `22P02` and invalid UUID syntax. The corrected mapping transfers the
+17 UUID source columns as DMS `string(36)`. A fresh CDC test passed. Resuming did
+not replay the earlier rejected insert, so the author repeated full load.
+
+1. In **DMS → your task**, save the error, checkpoint and table statistics. If
+   the task is running, stop it with step 3 above and wait for Stopped. If it is
+   already Failed, leave it failed for modification. Do not try to conceal the
+   error by changing its handling policy.
+2. Replace your local `table-mappings.json` with the complete reviewed mapping in
+   [task creation](../05-dms/build.md#7-write-and-review-the-exact-table-mappings).
+   Verify your 14 tables, range boundaries and all 17 UUID transformations.
+3. In **CloudShell**, apply the correction:
+
+```bash
+aws dms modify-replication-task --replication-task-arn "$TASK_ARN" \
+  --table-mappings file://table-mappings.json
+```
+
+```bash
+aws dms describe-replication-tasks --filters Name=replication-task-arn,Values="$TASK_ARN" \
+  --query 'ReplicationTasks[0].{State:Status,Mappings:TableMappings}'
+```
+
+Repeat the describe command until modification finishes and the task is Stopped.
+**Console alternative:** task → Actions → Modify → Table mappings → JSON editor;
+replace the mapping, save, wait for Stopped and reopen it to verify the saved JSON.
+
+4. On the **runner**, `docker compose ps -a` must show target stopped. In the
+   **target PostgreSQL prompt**, connected as hydra to database hydra, run the
+   following only after confirming this is your incomplete training copy:
+
+```sql
+SELECT current_database(),current_user;
+SELECT COUNT(*) AS native_migrations FROM public.schema_migration;
+```
+
+Require database hydra, owner hydra and 206 native migration records for this
+pinned version. Then empty the 14 data tables in one transaction:
+
+```sql
+BEGIN;
+TRUNCATE TABLE
+ public.hydra_client,
+ public.hydra_jwk,
+ public.hydra_oauth2_access,
+ public.hydra_oauth2_authentication_session,
+ public.hydra_oauth2_code,
+ public.hydra_oauth2_flow,
+ public.hydra_oauth2_jti_blacklist,
+ public.hydra_oauth2_logout_request,
+ public.hydra_oauth2_obfuscated_authentication_session,
+ public.hydra_oauth2_oidc,
+ public.hydra_oauth2_pkce,
+ public.hydra_oauth2_refresh,
+ public.hydra_oauth2_trusted_jwt_bearer_issuer,
+ public.networks;
+SELECT COUNT(*) AS native_migrations FROM public.schema_migration;
+COMMIT;
+```
+
+Require 206 again. `schema_migration` is preserved. No CASCADE is used: an
+unexpected dependency must stop the reset. Rerun the target counts from
+[cutover comparisons](../06-cutover/build.md#4-compare-exact-table-counts-while-writes-are-stopped)
+and require all 14 data tables empty. Keep target Hydra stopped.
+
+5. In **CloudShell**, restart the full load:
+
+```bash
+aws dms start-replication-task --replication-task-arn "$TASK_ARN" \
+  --start-replication-task-type reload-target
+```
+
+**Console alternative:** task → Actions → Restart/Resume → choose Restart, which
+reloads existing data, and confirm the action. This is safe here because you
+explicitly emptied your incomplete target copy. DO_NOTHING preserves the native
+schema and does not empty it for you.
+
+6. Repeat full-load monitoring, the visible CDC exercise, final validation and
+   cutover. If the previous test client still exists on MySQL, let full load copy
+   it and use a new unique test ID in every command of the fresh CDC exercise.
+   Do not insert a duplicate client or edit target rows to make validation pass.
+
+[AWS modifying a task](https://docs.aws.amazon.com/cli/latest/reference/dms/modify-replication-task.html),
+[restart and resume](https://docs.aws.amazon.com/cli/latest/reference/dms/start-replication-task.html),
+[datatype transformation limits](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Tasks.CustomizingTasks.TableMapping.SelectionTransformation.Transformations.html).

@@ -41,14 +41,14 @@ aws rds describe-db-clusters --db-cluster-identifier "$LAB-source" --query 'DBCl
 ```
 
 ```bash
-aws rds describe-db-clusters --db-cluster-identifier "$LAB-target" --query 'DBClusters[0].{ID:DBClusterIdentifier,Endpoint:Endpoint,Members:DBClusterMembers,Tags:TagList}'
+aws rds describe-db-instances --db-instance-identifier "$TARGET_DB_ID" --query 'DBInstances[0].{ID:DBInstanceIdentifier,Engine:Engine,Endpoint:Endpoint,Tags:TagList}'
 ```
 
 ```bash
 aws ec2 describe-instances --instance-ids "$RUNNER_ID" --query 'Reservations[].Instances[].{ID:InstanceId,Tags:Tags,Volumes:BlockDeviceMappings}'
 ```
 
-Expected: only the two clusters and one runner in your worksheet. If you created
+Expected: only the source cluster, target RDS PostgreSQL instance and runner in your worksheet. If you created
 readers or extra disks during extensions, inventory those dependencies too.
 
 ## 3. Delete DMS task, endpoints, instance and certificate
@@ -102,20 +102,35 @@ and record that fact. Do not turn every error into an ignored result.
 [AWS delete DMS task](https://docs.aws.amazon.com/cli/latest/reference/dms/delete-replication-task.html)
 and [delete replication instance](https://docs.aws.amazon.com/cli/latest/reference/dms/delete-replication-instance.html).
 
-## 4. Delete writers and clusters, retaining final snapshots
+## 4. Delete the source cluster and target DB instance with final snapshots
 
-Disable deletion protection on each named cluster:
+The source recovery copy is an Aurora **DB cluster snapshot**. The target recovery
+copy is an RDS **DB snapshot**. Save a unique suffix for both:
+
+```bash
+export SNAPSHOT_SUFFIX=$(date -u +%Y%m%d%H%M%S)
+```
+
+Disable protection on the source cluster and target instance separately:
 
 ```bash
 aws rds modify-db-cluster --db-cluster-identifier "$LAB-source" --no-deletion-protection --apply-immediately
 ```
 
 ```bash
-aws rds modify-db-cluster --db-cluster-identifier "$LAB-target" --no-deletion-protection --apply-immediately
+aws rds modify-db-instance --db-instance-identifier "$TARGET_DB_ID" --no-deletion-protection --apply-immediately
 ```
 
-Verify `DeletionProtection` is false with `describe-db-clusters`. The baseline has
-one writer per cluster. Delete those instances first:
+```bash
+aws rds describe-db-clusters --db-cluster-identifier "$LAB-source" --query 'DBClusters[0].DeletionProtection'
+```
+
+```bash
+aws rds describe-db-instances --db-instance-identifier "$TARGET_DB_ID" --query 'DBInstances[0].{Protection:DeletionProtection,State:DBInstanceStatus}'
+```
+
+Require both protection values false and target Available. Remove any source
+readers you explicitly added, then the source writer:
 
 ```bash
 aws rds delete-db-instance --db-instance-identifier "$SOURCE_WRITER_ID" --skip-final-snapshot
@@ -125,42 +140,45 @@ aws rds delete-db-instance --db-instance-identifier "$SOURCE_WRITER_ID" --skip-f
 aws rds wait db-instance-deleted --db-instance-identifier "$SOURCE_WRITER_ID"
 ```
 
-```bash
-aws rds delete-db-instance --db-instance-identifier "$TARGET_WRITER_ID" --skip-final-snapshot
-```
-
-```bash
-aws rds wait db-instance-deleted --db-instance-identifier "$TARGET_WRITER_ID"
-```
-
-The writer deletion skips an instance snapshot; Aurora recovery is retained by
-the **cluster snapshots** below. Choose a unique suffix for this teardown:
-
-```bash
-export SNAPSHOT_SUFFIX=$(date -u +%Y%m%d%H%M%S)
-```
+The source instance snapshot is skipped because its data is retained in the
+cluster snapshot created when deleting the source cluster:
 
 ```bash
 aws rds delete-db-cluster --db-cluster-identifier "$LAB-source" --no-skip-final-snapshot --final-db-snapshot-identifier "$LAB-source-final-$SNAPSHOT_SUFFIX"
 ```
 
 ```bash
-aws rds delete-db-cluster --db-cluster-identifier "$LAB-target" --no-skip-final-snapshot --final-db-snapshot-identifier "$LAB-target-final-$SNAPSHOT_SUFFIX"
-```
-
-```bash
 aws rds wait db-cluster-deleted --db-cluster-identifier "$LAB-source"
 ```
 
+Delete the target **DB instance** with its own final snapshot. This command also
+retains its automated backups until their existing retention period expires;
+record these retained costs along with the final snapshot:
+
 ```bash
-aws rds wait db-cluster-deleted --db-cluster-identifier "$LAB-target"
+aws rds delete-db-instance --db-instance-identifier "$TARGET_DB_ID" \
+  --no-skip-final-snapshot --final-db-snapshot-identifier "$LAB-target-final-$SNAPSHOT_SUFFIX" \
+  --no-delete-automated-backups
 ```
 
-Record the final snapshots and their retention deadline. They continue to incur
-storage charges. Keep them until you deliberately decide the recovery copies are
-no longer needed. RDS manages deletion of its managed master secrets; inspect the
-result instead of deleting unrelated secrets.
-[AWS deleting Aurora clusters](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_DeleteCluster.html).
+```bash
+aws rds wait db-instance-deleted --db-instance-identifier "$TARGET_DB_ID"
+```
+
+```bash
+aws rds describe-db-cluster-snapshots --db-cluster-snapshot-identifier "$LAB-source-final-$SNAPSHOT_SUFFIX" --query 'DBClusterSnapshots[0].{ID:DBClusterSnapshotIdentifier,State:Status,Engine:Engine}'
+```
+
+```bash
+aws rds describe-db-snapshots --db-snapshot-identifier "$LAB-target-final-$SNAPSHOT_SUFFIX" --query 'DBSnapshots[0].{ID:DBSnapshotIdentifier,State:Status,Engine:Engine}'
+```
+
+Record both snapshots and their retention deadlines. Wait for snapshot status
+Available before treating either as a recovery copy. Keep them until you decide
+they are no longer needed. RDS deletes its managed master secret with its database;
+inspect the result instead of deleting unrelated secrets.
+[AWS Aurora deletion](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_DeleteCluster.html)
+and [RDS DB instance deletion and retained backups](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_DeleteInstance.html).
 
 ## 5. Remove runner, dedicated secrets and database groups
 
@@ -197,7 +215,7 @@ aws rds delete-db-cluster-parameter-group --db-cluster-parameter-group-name "$LA
 ```
 
 ```bash
-aws rds delete-db-cluster-parameter-group --db-cluster-parameter-group-name "$LAB-pg"
+aws rds delete-db-parameter-group --db-parameter-group-name "$LAB-pg"
 ```
 
 [AWS secret deletion recovery window](https://docs.aws.amazon.com/secretsmanager/latest/userguide/manage_delete-secret.html).

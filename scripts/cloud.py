@@ -25,7 +25,7 @@ def main():
     if a.action == 'preflight':
         rds = session.client('rds')
         print('Authenticated AWS account:', account)
-        for engine, major in [('aurora-mysql', '8.0.mysql_aurora.3.'), ('aurora-postgresql', '17.')]:
+        for engine, major in [('aurora-mysql', '8.0.mysql_aurora.3.'), ('postgres', '17.')]:
             versions = []
             for page in rds.get_paginator('describe_db_engine_versions').paginate(Engine=engine):
                 versions += [v['EngineVersion'] for v in page['DBEngineVersions'] if v['EngineVersion'].startswith(major)]
@@ -130,7 +130,7 @@ def main():
             settings = {'SecretsManagerAccessRoleArn': cfg['dms_secrets_role_arn'], 'SecretsManagerSecretId': cfg[n]['dms_secret_arn']}
             if n == 'target':
                 settings['AfterConnectScript'] = 'SET session_replication_role=replica'
-            request = {'EndpointIdentifier': endpoint_id, 'EndpointType': n, 'EngineName': 'aurora' if n == 'source' else 'aurora-postgresql', 'SslMode': 'verify-full', 'CertificateArn': certificate_arn, 'Tags': [{'Key': 'Project', 'Value': cfg['name']}]}
+            request = {'EndpointIdentifier': endpoint_id, 'EndpointType': n, 'EngineName': 'aurora' if n == 'source' else 'postgres', 'SslMode': 'verify-full', 'CertificateArn': certificate_arn, 'Tags': [{'Key': 'Project', 'Value': cfg['name']}]}
             request['MySQLSettings' if n == 'source' else 'PostgreSQLSettings'] = settings
             if n == 'target':
                 request['DatabaseName'] = 'hydra'

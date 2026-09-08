@@ -25,11 +25,15 @@ curl -fsS http://127.0.0.1:8080/.well-known/jwks.json -o evidence/jwks-before.js
 JWKS contains public signing keys. Never export the private hydra_jwk database
 rows as a substitute.
 
-## 2. Fence every source writer
+## 2. Stop every source writer
 
 Finish the CDC exercise and close other SQL write sessions. If you started any
 optional workload job, stop it in its original terminal and confirm it exited.
 Stop the gateway and source Hydra while keeping portal alive:
+
+```bash
+date -u '+%Y-%m-%dT%H:%M:%SZ' | tee evidence/fence-time.txt
+```
 
 ```bash
 docker compose stop gateway
@@ -40,15 +44,11 @@ docker compose stop source
 ```
 
 ```bash
-date -u '+%Y-%m-%dT%H:%M:%SZ' | tee evidence/fence-time.txt
-```
-
-```bash
 docker compose ps -a
 ```
 
 Expected: source and gateway stopped, portal running, target not running. In the
-**source MySQL administrator prompt** from Module 02:
+**source MySQL administrator prompt** from task 2:
 
 ```sql
 SELECT trx_mysql_thread_id,trx_started,trx_state FROM information_schema.innodb_trx;
@@ -59,7 +59,7 @@ SHOW MASTER STATUS;
 Investigate every application transaction; DMS's replication connection can remain.
 Record the final binlog file/position. Repeat `SHOW MASTER STATUS` after a minute
 and investigate changes from unknown writers. No application deployment, manual
-SQL write or janitor may continue. Record the start of application downtime.
+SQL write or janitor may continue. Record the start of application downtime. The portal URL will now fail to load because you stopped its gateway. This is expected during the switch. Keep Alice's browser tab and the portal container open; do not sign out or restart portal.
 
 ## 3. Prove CDC has drained
 
@@ -84,7 +84,7 @@ A zero-lag datapoint alone is insufficient. Save the task checkpoint and statist
 [AWS DMS validation](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Validating.html)
 and [monitoring](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Monitoring.html).
 
-## 4. Compare exact table counts while writers are frozen
+## 4. Compare exact table counts while writes are stopped
 
 In the **source MySQL prompt**, run:
 
@@ -172,7 +172,8 @@ SELECT COUNT(*) AS restored_clients,
 FROM public.hydra_client WHERE id LIKE 'lab-restored-%';
 ```
 
-All three values must match. A scan over 35 GiB can take time. Keep all writers
+All three values must match. Large metadata scans can take tens of minutes,
+especially when the values are not in the database cache. Keep all writers
 fenced until the evidence is complete. Investigate any mismatch before cutover.
 
 ## 5. Stop DMS apply
@@ -195,7 +196,9 @@ Require **stopped**. Preserve final statistics. Do not start target Hydra while 
 is still applying data or validation is unresolved.
 [AWS stop task](https://docs.aws.amazon.com/cli/latest/reference/dms/stop-replication-task.html).
 
-## 6. Check every target foreign key explicitly
+## 6. Check that linked records still have their parent records
+
+A foreign key links one record to another, such as an OAuth record to its network. An orphan is a record whose parent is missing. Check every link because DMS copied data with these checks disabled in its own connection.
 
 In **target psql**, database hydra, as schema owner hydra, enable stop-on-error:
 
@@ -241,7 +244,9 @@ SELECT check_sql FROM lab_fk_checks ORDER BY conname
 The pinned schema has 28 foreign keys. Require **orphans=0 for every result**.
 If your schema differs, reconcile its constraint count before proceeding.
 
-## 7. Reset owned sequences before new target writes
+## 7. Set the next automatic ID values
+
+A sequence supplies the next automatic number for a new record. Copying rows does not advance it. Set it from the copied data so a new write does not reuse an existing number.
 
 In the same psql session:
 
@@ -294,7 +299,7 @@ docker compose --profile target up -d --no-deps target
 curl -fsS http://127.0.0.1:5445/health/ready
 ```
 
-Require readiness success. If it fails, inspect target logs and leave the gateway
+Expected: HTTP success and a JSON body containing `"status":"ok"`. If it fails, inspect target logs and leave the gateway
 stopped. Starting target can itself write database state; the recovery boundary
 is no later than this point, not merely the first browser login.
 
@@ -320,7 +325,9 @@ docker compose up -d --no-deps gateway
 curl -fsS http://127.0.0.1:8080/ -o /dev/null -w '%{http_code}\n'
 ```
 
-Require HTTP 200. The gateway uses target and the portal's admin selection reads
+Expected: `200`. The container can show Started before the gateway accepts requests. If the first check reports a connection reset or refusal, wait a few seconds and repeat this curl check. If it still fails after a minute, inspect `docker compose logs --tail=50 gateway target` and resolve the error before the browser tests. Do not restart the portal.
+
+The gateway uses target and the portal's admin selection reads
 `active.json`. Source remains stopped. DMS remains stopped.
 
 ## 9. Prove continuity and record downtime
@@ -331,7 +338,7 @@ Require HTTP 200. The gateway uses target and the portal's admin selection reads
    A new login does not substitute for this retained-refresh test.
 3. In a private window, sign in as Bob and refresh. This proves new target writes.
 4. Select **Revoke token and sign out** for Bob. Returning to Protected account
-   must require sign-in again.
+   must require sign-in again. Require the confirmation **Hydra rejected the revoked refresh token**; the portal checks reuse before discarding its session tokens.
 5. On the runner, save discovery and JWKS again using step 1's curl commands with
    `after` filenames. Compare `issuer` and the public key IDs/material with before.
    Investigate a changed issuer or missing old signing key before accepting.

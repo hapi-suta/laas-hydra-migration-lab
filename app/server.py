@@ -59,13 +59,28 @@ def register():
                'grant_types': ['authorization_code', 'refresh_token', 'client_credentials'],
                'response_types': ['code'], 'scope': 'openid offline_access profile',
                'redirect_uris': [PORTAL + '/callback'], 'token_endpoint_auth_method': 'client_secret_basic'}
-    # Only initialize the source. Never create records on the migration target.
+    # A restarted portal checks the active server. Only the source can be seeded.
+    endpoint = admin() + '/admin/clients'
     try:
-        request_json('http://source:4445/admin/clients/' + CLIENT_ID)
+        request_json(endpoint + '/' + CLIENT_ID)
     except HTTPError as e:
-        if e.code != 404:
+        if e.code != 404 or active() != 'source':
             raise
-        request_json('http://source:4445/admin/clients', 'POST', payload)
+        request_json(endpoint, 'POST', payload)
+
+
+def verify_revoked_refresh(token):
+    """Require the authorization server to reject reuse, not just return HTTP 200 on revoke."""
+    try:
+        token_request({'grant_type': 'refresh_token', 'refresh_token': token})
+    except HTTPError as error:
+        response = json.load(error)
+        name = response.get('error')
+        print(json.dumps({'event': 'revoked_refresh_retry', 'http_status': error.code, 'oauth_error': name}), flush=True)
+        if (error.code, name) in ((400, 'invalid_grant'), (401, 'token_inactive')):
+            return True
+        raise
+    raise RuntimeError('Revoked refresh token was accepted')
 
 
 STYLE = '''body{margin:0;background:#eef3f6;color:#142d3e;font:17px system-ui}main{max-width:850px;margin:65px auto;padding:36px;background:white;border-radius:20px}h1{font-size:40px;letter-spacing:-1px}a,button{color:#087b72}button,.button{display:inline-block;border:0;background:#087b72;color:white;padding:13px 20px;border-radius:8px;text-decoration:none;cursor:pointer;font:inherit}small{color:#637985}pre{background:#edf5f4;padding:20px;white-space:pre-wrap;overflow-wrap:anywhere}label{display:block;margin:16px 0}.badge{display:inline-block;background:#dff4ee;padding:8px;border-radius:6px}nav{display:flex;gap:12px;flex-wrap:wrap}'''
@@ -116,7 +131,7 @@ class Handler(BaseHTTPRequestHandler):
             if p.path == '/health':
                 return self.send('portal ready')
             if p.path == '/':
-                return self.page('Your migration practice portal', f'<p class="badge">Active backend: {active()}</p><p>Use Alice or Bob, synthetic identities created only for this lab. Sign in before migration, then refresh the same session after cutover.</p><nav><a class="button" href="/signin">Sign in</a><a class="button" href="/account">Protected account</a></nav><p>No customer credentials are required.</p>')
+                return self.page('Your migration practice portal', f'<p class="badge">Active backend: {active()}</p><p>{html.escape(self.s.pop("notice", ""))}</p><p>Use Alice or Bob, synthetic identities created only for this lab. Sign in before migration, then refresh the same session after cutover.</p><nav><a class="button" href="/signin">Sign in</a><a class="button" href="/account">Protected account</a></nav><p>No customer credentials are required.</p>')
             if p.path == '/signin':
                 state = secrets.token_urlsafe(32)
                 verifier = secrets.token_urlsafe(48)
@@ -191,6 +206,10 @@ class Handler(BaseHTTPRequestHandler):
                     auth = base64.b64encode(f'{CLIENT_ID}:{CLIENT_SECRET}'.encode()).decode()
                     with urlopen(Request(INTERNAL + '/oauth2/revoke', data=urlencode({'token': token}).encode(), headers={'Authorization': 'Basic ' + auth}), timeout=20):
                         pass
+                refresh = self.s.get('tokens', {}).get('refresh_token')
+                if refresh:
+                    verify_revoked_refresh(refresh)
+                    self.s['notice'] = 'Hydra rejected the revoked refresh token. You are signed out.'
                 self.s.pop('tokens', None)
                 return self.send('', 302, '/')
             return self.send('Not found', 404)

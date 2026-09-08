@@ -1,52 +1,76 @@
-# Hydra Aurora Migration Lab
+# Comcast practice lab: move Hydra to PostgreSQL
 
-**Aurora MySQL → Aurora PostgreSQL · AWS SCT · AWS DMS · Application continuity**
+You are helping Comcast's team practise a database move. In this training story,
+a sign-in service uses **Aurora MySQL**. The team wants to move its data to
+**RDS PostgreSQL** and check that people can still sign in.
 
-## Build your own migration lab from scratch
+Alice will sign in before the move. She needs to keep using her existing login
+after it. Bob will sign in for the first time after the move. Your job is to make
+both work, and show the team the checks that prove it.
 
-You create every lab resource yourself: networking, database clusters, the Hydra
-application, restored MySQL data, SCT connections and assessment, DMS endpoints and
-migration task. Then you demonstrate full load, change replication, validation,
-and application cutover.
+You start with an empty AWS lab. You build the old and new systems, restore the
+practice data, copy it, switch the application, and test it again. This is a
+Comcast training scenario using synthetic data, not Comcast production data.
 
-Start with your own empty lab namespace in the assigned sandbox account. Earlier
-engineering tests are evidence for the guide; they are not your completed lab.
-You do not need an instructor to provision resources or run migration helpers.
-Choose the **Console / SCT GUI** instructions or their **native CLI** equivalents
-at each stage. Complete the same verification before moving on.
+## What you will see
 
-This project uses **CBUS**:
+| Part of the story | What you do | What you should see |
+|---|---|---|
+| Before the move | Sign in as Alice | **Active backend: source** and **Verified by source** |
+| While data is copying | Keep using the app; create and change a test client | The app still uses MySQL; the changed row also appears in PostgreSQL |
+| During the switch | Pause new activity and finish the checks | The portal is unavailable until the checks and switch finish |
+| After the move | Refresh Alice's existing token; sign in as Bob | **Active backend: target** and **Verified by target** |
+| Final check | Revoke Bob's token and try to use it again | Hydra rejects it and the portal asks Bob to sign in again |
 
-| Phase | What you do |
+Ory Hydra is the real OAuth server behind the exercise. OAuth is the sign-in and
+access flow you will test. Hydra has no built-in user dashboard, so this lab
+includes a small practice portal with Alice and Bob's login and consent screens.
+The portal talks to Hydra; Hydra stores its data in the database.
+
+## The project
+
+| Component | Its job |
 |---|---|
-| **Concepts** | Understand the architecture and predict the result |
-| **Build** | Set up each component with guided steps |
-| **Use** | Practice and verify normal behavior |
-| **Survive** | Diagnose a failure, recover, and explain the cause |
+| Aurora MySQL, the **source** | The old database that the app uses first |
+| RDS PostgreSQL, the **target** | The new database that the app will use after the move |
+| AWS SCT, Schema Conversion Tool | Checks the table designs and produces SQL for you to review |
+| AWS DMS, Database Migration Service | Copies the existing rows and then follows new changes |
+| Hydra and the practice portal | Let you see whether sign-in and access still work |
 
-## Your learning journey
+- Before cutover: **Portal → Hydra → Aurora MySQL**.
+- During migration: **Aurora MySQL → DMS → RDS PostgreSQL**.
+- After cutover: **Portal → Hydra → RDS PostgreSQL**.
 
-| Module | What you will deliver |
-|---|---|
-| [01 - Understand the migration](01-demo/build.md) | Architecture, worksheet and acceptance criteria |
-| [02 - Build AWS](02-aws/build.md) | Two VPCs, two Aurora clusters, a runner, and DMS |
-| [03 - Restore MySQL](03-data/build.md) | Your own SQL restore, measured 35 GiB dataset and working Hydra |
-| [04 - Assess with SCT](04-sct/build.md) | Assessment report and reviewed table mappings |
-| [05 - Migrate with DMS](05-dms/build.md) | Full load followed by continuous replication |
-| [06 - Validate and cut over](06-cutover/build.md) | Reconciled data and successful preexisting sessions |
-| [07 - Survive failures](07-incidents/build.md) | Incident diagnosis and recovery evidence |
-| [08 - Repeat and hand over](08-handover/build.md) | A repeatable runbook and cleanup record |
+## Follow these six tasks
 
-## What counts as completion?
+Follow the **AWS Console path first**. The matching AWS CLI path comes after it
+for learners who want to repeat the work using commands. Do not create the same
+resource twice. Restoring a SQL file and running the app require a terminal;
+the guide shows how to open that terminal from the Console.
 
-A database connection or a green DMS task is only one checkpoint. Completion requires the requested dataset size, successful row reconciliation, proof that old refresh tokens work on the new backend, successful new logins, and a documented recovery boundary.
+Each task explains **where to work, what to do, why you are doing it, and what
+to expect**. Stop at each check. A green AWS status alone does not prove that the
+application works.
 
-Begin with prerequisites, then **Module 02** to create your AWS environment.
-Module 01 explains the migration before you build. Follow Modules 03-08 in order.
+1. [Build the source and target](lab/01-build.md).
+2. [Restore data and run Hydra](lab/02-restore.md).
+3. [Assess the schema with SCT](lab/03-sct.md).
+4. [Migrate with DMS and watch live changes](lab/04-dms.md).
+5. [Cut over to PostgreSQL](lab/05-cutover.md).
+6. [Prove the app works and clean up](lab/06-prove.md).
 
-**Engineering validation so far:** Aurora provisioning, Hydra login/refresh and
-DMS endpoint TLS tests passed. SCT generated assessment artifacts with action
-items requiring review. The complete 35 GiB DMS migration and cloud cutover are
-not yet verified. See [the validation record](validation.md). Record your own results; reading a page does not pass a gate.
+Start with [Before you begin](start.md), then task 1. Keep [your worksheet](worksheet.md)
+beside you. Save your own resource IDs and results as you go.
 
-[Begin with prerequisites](start.md) · [Download application source and reference assets](downloads/hydra-practice.zip) · [Bundle checksum](downloads/SHA256SUMS)
+## How to read the expected outputs
+
+The guide shows the important fields from successful checks. Your AWS account ID,
+resource IDs, endpoints, passwords, token values and timestamps will differ.
+Values shown as `YOUR_...` must be replaced. Do not copy the author's AWS values.
+
+The full restore file contains **2,236,700 clients** before the app starts. The
+author's separate migration dataset contained **2,172,001 clients**. When checking
+DMS, compare your own source and target counts. Starting the portal and doing
+the exercises can add rows, so the two dataset counts are not interchangeable.
+
+[What has actually been tested](validation.md) · [Download the lab files](downloads/hydra-practice.zip) · [Download checksum](downloads/SHA256SUMS)

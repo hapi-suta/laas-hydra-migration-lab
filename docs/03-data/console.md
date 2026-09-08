@@ -1,7 +1,7 @@
 # Restore the source through Console access
 
 **You restore the data yourself.** Finish [Console infrastructure setup](../02-aws/console.md)
-and [application setup](../02-aws/application.md) first. Both Aurora clusters,
+and [application setup](../02-aws/application.md) first. The Aurora MySQL cluster, RDS PostgreSQL instance,
 SQL users and target schema must be your own work. The source database is empty.
 
 ## 1. Check your restore destination

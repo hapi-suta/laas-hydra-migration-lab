@@ -1,4 +1,8 @@
 import datetime
+import importlib.util
+import io
+from unittest.mock import patch
+from urllib.error import HTTPError
 from html.parser import HTMLParser
 import json
 from pathlib import Path
@@ -18,6 +22,10 @@ from cloud import engine_versions
 from target_check import sequence_reset
 from sct import command
 from scale import payload
+from oauth_probe import verify_account
+portal_spec = importlib.util.spec_from_file_location('lab_portal', ROOT / 'app/server.py')
+portal = importlib.util.module_from_spec(portal_spec)
+portal_spec.loader.exec_module(portal)
 
 
 class Cursor:
@@ -28,6 +36,32 @@ class Cursor:
 
 
 class MigrationChecks(unittest.TestCase):
+    def test_probe_rejects_wrong_subject_and_inactive_token(self):
+        body = '<h1>Your protected account</h1><p>Verified by target</p><pre>{"active":true,"sub":"bob","client_id":"lab-portal"}</pre>'
+        with self.assertRaises(AssertionError): verify_account('/account', body, 'target', 'alice')
+        with self.assertRaises(AssertionError): verify_account('/account', body.replace('true', 'false'), 'target', 'bob')
+        verify_account('/account', body, 'target', 'bob')
+
+    def test_portal_restart_checks_target_without_creating_client(self):
+        missing = HTTPError('http://target', 404, 'Not Found', {}, io.BytesIO(b'{}'))
+        with patch.object(portal, 'active', return_value='target'), patch.object(portal, 'request_json', side_effect=missing) as request:
+            with self.assertRaises(HTTPError): portal.register()
+            self.assertEqual(request.call_count, 1)
+            self.assertIn('http://target:4445/', request.call_args.args[0])
+
+    def test_revocation_requires_refresh_rejection(self):
+        with patch.object(portal, 'token_request', return_value={'access_token': 'unexpected'}):
+            with self.assertRaises(RuntimeError): portal.verify_revoked_refresh('synthetic-token')
+        rejected = HTTPError('http://test', 400, 'Bad Request', {}, io.BytesIO(b'{"error":"invalid_grant"}'))
+        with patch.object(portal, 'token_request', side_effect=rejected):
+            self.assertTrue(portal.verify_revoked_refresh('synthetic-token'))
+        inactive = HTTPError('http://test', 401, 'Unauthorized', {}, io.BytesIO(b'{"error":"token_inactive"}'))
+        with patch.object(portal, 'token_request', side_effect=inactive):
+            self.assertTrue(portal.verify_revoked_refresh('synthetic-token'))
+        unrelated = HTTPError('http://test', 400, 'Bad Request', {}, io.BytesIO(b'{"error":"invalid_client"}'))
+        with patch.object(portal, 'token_request', side_effect=unrelated):
+            with self.assertRaises(HTTPError): portal.verify_revoked_refresh('synthetic-token')
+
     def test_sct_named_parameters_and_quote_guard(self):
         self.assertEqual(command('CreateProject', name='demo'), "CreateProject -name: 'demo'\n/\n")
         with self.assertRaises(ValueError): command('AddSource', password="a'b")
@@ -88,6 +122,30 @@ class MigrationChecks(unittest.TestCase):
         self.assertIn('networks', names)
         self.assertNotIn('schema_migration', names)
         self.assertEqual(len(names), 14)
+        settings = json.loads((ROOT / 'migration/task-settings.json').read_text())
+        for route in ('console', 'build'):
+            text = (ROOT / 'docs/05-dms' / (route + '.md')).read_text()
+            configs = [json.loads(block) for block in re.findall(r'```json\n(.*?)\n```', text, re.S)]
+            self.assertIn(mapping, configs, route + ' mapping differs from the downloadable configuration')
+            self.assertIn(settings, configs, route + ' task settings differ from the downloadable configuration')
+
+    def test_uuid_cdc_mapping_preserves_native_target(self):
+        report = {'reviewed': True, 'tables': [{
+            'table': 'networks', 'column_match': True, 'primary_key': ['id'],
+            'source_columns': {'id': 'char'}, 'target_columns': {'id': 'uuid'},
+        }]}
+        rule = build(report)['rules'][-1]
+        self.assertEqual(rule['rule-action'], 'change-data-type')
+        self.assertEqual(rule['data-type'], {'type': 'string', 'length': 36})
+        report['tables'][0]['source_columns']['id'] = 'binary'
+        with self.assertRaises(ValueError):
+            build(report)
+        mapping = json.loads((ROOT / 'migration/table-mappings-example.json').read_text())
+        uuid_rules = [r for r in mapping['rules'] if r.get('rule-action') == 'change-data-type']
+        self.assertEqual(len(uuid_rules), 17)
+        self.assertTrue(all(r['data-type'] == {'type': 'string', 'length': 36} for r in uuid_rules))
+        self.assertIn(('hydra_client', 'nid'), {
+            (r['object-locator']['table-name'], r['object-locator']['column-name']) for r in uuid_rules})
 
     def test_dms_no_schema_ddl_and_strict_truncation(self):
         settings = json.loads((ROOT / 'migration/task-settings.json').read_text())
@@ -137,6 +195,31 @@ class SiteChecks(unittest.TestCase):
         for path in (ROOT / 'docs').rglob('*'):
             if path.is_file() and path.suffix in ('.md', '.json', '.svg', '.js', '.css'):
                 self.assertNotIn('\u2014', path.read_text(), str(path))
+
+    def test_rds_target_lifecycle_and_engine_selections(self):
+        build = (ROOT / 'docs/02-aws/build.md').read_text()
+        cleanup = (ROOT / 'docs/08-handover/build.md').read_text()
+        blocks = re.findall(r'```bash\n(.*?)```', build, re.S)
+        target_create = [b for b in blocks if 'aws rds create-db-instance' in b and '$TARGET_DB_ID' in b]
+        self.assertEqual(len(target_create), 1)
+        self.assertIn('--engine postgres ', target_create[0])
+        self.assertIn('--db-parameter-group-name', target_create[0])
+        self.assertIn('--allocated-storage', target_create[0])
+        self.assertNotIn('--db-cluster-identifier', target_create[0])
+        self.assertIn('DBInstances[0].Endpoint.Address', build)
+        target_delete = [b for b in re.findall(r'```bash\n(.*?)```', cleanup, re.S)
+                         if 'aws rds delete-db-instance' in b and '$TARGET_DB_ID' in b]
+        self.assertEqual(len(target_delete), 1)
+        self.assertIn('--no-skip-final-snapshot', target_delete[0])
+        self.assertIn('--final-db-snapshot-identifier', target_delete[0])
+        for path in (ROOT / 'docs').rglob('*.md'):
+            for block in re.findall(r'```[^\n]*\n(.*?)```', path.read_text(), re.S):
+                self.assertNotIn('aurora-postgresql', block, str(path))
+                self.assertNotIn('AURORA_POSTGRESQL', block, str(path))
+                self.assertNotIn('TARGET_WRITER', block, str(path))
+                self.assertNotIn('SHOW rds.force_ssl', block, str(path))
+        self.assertIn('--engine-name postgres', (ROOT / 'docs/05-dms/build.md').read_text())
+        self.assertIn("-vendor: 'POSTGRESQL'", (ROOT / 'docs/04-sct/build.md').read_text())
 
     def test_download_excludes_runtime_and_state(self):
         with zipfile.ZipFile(ROOT / 'site/downloads/hydra-practice.zip') as archive:

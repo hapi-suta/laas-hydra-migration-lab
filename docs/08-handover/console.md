@@ -21,7 +21,7 @@ Secrets Manager, VPC endpoints, IPv4 and transfer charges can appear separately.
 Tag activation and billing updates are not immediate; an empty graph does not
 mean the lab is free.
 
-Aurora stop is temporary, and storage/snapshot charges continue. Stopping EC2 also
+Stopping either database is temporary, and storage/snapshot charges continue. Stopping EC2 also
 retains its EBS storage. A review tag is only a label. Decide whether the lab is
 being retained for another practice session or permanently removed.
 
@@ -42,19 +42,29 @@ service roles or other learners' instances.
 
 ## 5. Remove the databases and runner
 
-1. In **RDS → Databases**, select each lab cluster → **Modify**, clear deletion
-   protection and apply the change deliberately. Wait for it to apply.
-2. Delete any lab readers first, then the writer/cluster using the Console's
-   deletion workflow. Choose a uniquely named **final snapshot** if the handover
-   calls for retained recovery. Record its owner and retention deadline.
-3. In **EC2 → Instances**, select only the lab runner → **Instance state →
-   Terminate instance**. Verify its root volume was deleted and no separately
-   created lab volumes remain. Stopping the instance is not teardown.
-4. In **Secrets Manager**, schedule deletion of the two dedicated DMS secrets
-   using the recovery window. RDS manages its own master-secret lifecycle;
-   inspect the result instead of deleting unrelated RDS secrets.
+1. In **RDS → Databases**, select the **source Aurora cluster → Modify**. Clear
+   deletion protection and apply. Separately select the **target PostgreSQL DB
+   instance → Modify**, clear deletion protection and apply. Verify both changes.
+2. For the source, delete any added readers first, then the writer and cluster
+   using the Aurora deletion workflow. Retain a uniquely named final **DB cluster
+   snapshot**. Wait for the cluster to disappear and the snapshot to be Available.
+3. For the target, select its **DB instance → Actions → Delete**. Select **Create
+   final snapshot**, enter a unique name and select **Retain automated backups**.
+   Enter the requested deletion confirmation and choose **Delete**. Wait for the
+   instance to disappear. In **Snapshots → Manual**, require the target **DB
+   snapshot** Available. Record its retention deadline and the automated-backup
+   expiry. The target has no Aurora cluster to delete.
+4. In **EC2 → Instances**, select only the runner → **Instance state → Terminate
+   instance**. Check that its root volume and any separately created lab volumes
+   are accounted for. Stopping an instance is not teardown.
+5. In **Secrets Manager**, schedule deletion of the two dedicated DMS secrets
+   with the recovery window. RDS manages its master-secret lifecycle; inspect
+   the result instead of deleting unrelated secrets.
 
-Final snapshots and pending-deletion secrets are retained resources, so a complete
+[AWS Aurora deletion](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_DeleteCluster.html)
+and [RDS DB instance deletion](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_DeleteInstance.html).
+
+Final snapshots, retained automated backups and pending-deletion secrets are retained resources, so a complete
 handover must list them. Deleting the final recovery copy is a separate explicit
 decision; it is not silently included in this sequence.
 
@@ -67,8 +77,8 @@ decision; it is not silently included in this sequence.
    subnets and route tables. Detach and delete the source internet gateway.
 4. Delete the two lab VPCs. Dependency errors identify remaining resources; inspect
    them rather than deleting every resource returned by the Console.
-5. In **RDS**, delete the now-unused lab DB subnet groups and cluster parameter
-   groups. Then in **IAM**, delete the lab-specific runner instance profile/role and DMS
+5. In **RDS**, delete the now-unused lab DB subnet groups, source DB cluster parameter
+   group and target DB parameter group. Then in **IAM**, delete the lab-specific runner instance profile/role and DMS
    secrets role when unused. Keep shared `dms-vpc-role` and
    `dms-cloudwatch-logs-role` if other migrations use them.
 6. Remove lab-only alarms/log groups according to the evidence retention policy.

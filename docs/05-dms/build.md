@@ -62,6 +62,31 @@ create its own control tables in awsdms_control. The role membership resolves
 PostgreSQL's `must be able to SET ROLE dms_apply` ownership error.
 [AWS PostgreSQL target permissions/constraints](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Target.PostgreSQL.html).
 
+Verify the setting in a connection authenticated as `dms_apply`, not as labadmin.
+On the runner, use your target DB instance endpoint and the new DMS password:
+
+```bash
+docker run --rm -it --network host -e PSQL_HISTORY=/dev/null \
+  -v "$PWD/runtime/certs:/certs:ro" postgres:17.4 \
+  psql "host=$TARGET_HOST port=5432 dbname=hydra user=dms_apply sslmode=verify-full sslrootcert=/certs/global-bundle.pem" -W
+```
+
+```sql
+SELECT current_user;
+SET session_replication_role=replica;
+SHOW session_replication_role;
+RESET session_replication_role;
+SHOW session_replication_role;
+\q
+```
+
+Require current_user=dms_apply, then replica, then origin. This verifies the
+DMS session setting without changing the application's defaults. If permission
+is denied, stop and review the target grants before creating the endpoint.
+The author verified this permission on RDS PostgreSQL 17.11 by connecting as
+dms_apply, setting session_replication_role to replica, and resetting it to origin.
+
+
 ## 3. Store the dedicated credentials in Secrets Manager
 
 **Where:** CloudShell, your lab directory. Restore LAB, AWS_REGION, SOURCE_HOST,
@@ -85,7 +110,7 @@ vi target-secret.json
 ```
 
 ```json
-{"username":"dms_apply","password":"YOUR_TARGET_DMS_PASSWORD","host":"YOUR_TARGET_WRITER_ENDPOINT","port":5432}
+{"username":"dms_apply","password":"YOUR_TARGET_DMS_PASSWORD","host":"YOUR_TARGET_INSTANCE_ENDPOINT","port":5432}
 ```
 
 Use the exact passwords you just assigned in SQL. Create each secret:
@@ -184,13 +209,13 @@ export SOURCE_ENDPOINT=$(aws dms create-endpoint --endpoint-identifier "$LAB-sou
 
 ```bash
 export TARGET_ENDPOINT=$(aws dms create-endpoint --endpoint-identifier "$LAB-target" \
-  --endpoint-type target --engine-name aurora-postgresql --database-name hydra \
+  --endpoint-type target --engine-name postgres --database-name hydra \
   --ssl-mode verify-full --certificate-arn "$DMS_CA" \
   --postgre-sql-settings file://target-endpoint-settings.json --tags Key=Project,Value="$LAB" \
   --query Endpoint.EndpointArn --output text)
 ```
 
-The engine tokens `aurora` and `aurora-postgresql` are DMS API values. Target
+The DMS engine tokens are `aurora` for Aurora MySQL and `postgres` for RDS PostgreSQL. Target
 `hydra` is the application database; SCT's `sct_compare` is not the DMS destination.
 `AfterConnectScript` disables FK triggers in DMS sessions while tables load in
 parallel. It does not change the normal Hydra session setting and does not remove
@@ -223,7 +248,7 @@ RDS CA, SQL grants and the target database name. Do not disable TLS to pass.
 ## 7. Write and review the exact table mappings
 
 In CloudShell create `table-mappings.json` with the complete JSON below. Compare
-each table to your own SQL inventory from Module 04 before saving. This baseline
+each table to your own SQL inventory from task 3 before saving. This baseline
 has 14 data tables. Stop and revise the review if your Hydra version differs.
 `explicit` avoids wildcard interpretation of table-name characters. `networks`
 is included. Native migration bookkeeping is deliberately not selected.
@@ -385,6 +410,304 @@ vi table-mappings.json
       },
       "rule-action": "rename",
       "value": "public"
+    },
+    {
+      "rule-type": "table-settings",
+      "rule-id": "200",
+      "rule-name": "client-full-load-ranges",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_client"
+      },
+      "parallel-load": {
+        "type": "ranges",
+        "columns": [
+          "id"
+        ],
+        "boundaries": [
+          [
+            "lab-restored-000000560000"
+          ],
+          [
+            "lab-restored-000001120000"
+          ],
+          [
+            "lab-restored-000001680000"
+          ]
+        ]
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "300",
+      "rule-name": "uuid-hydra_client-pk",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_client",
+        "column-name": "pk"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "301",
+      "rule-name": "uuid-hydra_client-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_client",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "302",
+      "rule-name": "uuid-hydra_jwk-pk",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_jwk",
+        "column-name": "pk"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "303",
+      "rule-name": "uuid-hydra_jwk-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_jwk",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "304",
+      "rule-name": "uuid-hydra_oauth2_access-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_access",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "305",
+      "rule-name": "uuid-hydra_oauth2_authentication_session-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_authentication_session",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "306",
+      "rule-name": "uuid-hydra_oauth2_code-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_code",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "307",
+      "rule-name": "uuid-hydra_oauth2_flow-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_flow",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "308",
+      "rule-name": "uuid-hydra_oauth2_jti_blacklist-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_jti_blacklist",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "309",
+      "rule-name": "uuid-hydra_oauth2_logout_request-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_logout_request",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "310",
+      "rule-name": "uuid-hydra_oauth2_obfuscated_authentication_session-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_obfuscated_authentication_session",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "311",
+      "rule-name": "uuid-hydra_oauth2_oidc-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_oidc",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "312",
+      "rule-name": "uuid-hydra_oauth2_pkce-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_pkce",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "313",
+      "rule-name": "uuid-hydra_oauth2_refresh-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_refresh",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "314",
+      "rule-name": "uuid-hydra_oauth2_trusted_jwt_bearer_issuer-id",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_trusted_jwt_bearer_issuer",
+        "column-name": "id"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "315",
+      "rule-name": "uuid-hydra_oauth2_trusted_jwt_bearer_issuer-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_trusted_jwt_bearer_issuer",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "316",
+      "rule-name": "uuid-networks-id",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "networks",
+        "column-name": "id"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
     }
   ]
 }
@@ -392,6 +715,56 @@ vi table-mappings.json
 
 [AWS selection rules](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Tasks.CustomizingTasks.TableMapping.SelectionTransformation.Selections.html)
 and [transformation rules](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Tasks.CustomizingTasks.TableMapping.SelectionTransformation.Transformations.html).
+
+The `table-settings` rule divides the large client table into four full-load
+ranges using its indexed, non-NULL `id` column. These boundaries are for the
+supplied `lab-restored-*` fixture. Other client IDs still fall into the first or
+last range; the boundaries do not filter rows out. DMS manages the adjoining
+ranges. The other 13 tables keep their ordinary full-load behavior.
+
+For the full fixture, check the approximate balance in **MySQL** before creating
+the task:
+
+```sql
+SELECT CASE
+ WHEN id <= 'lab-restored-000000560000' THEN 1
+ WHEN id <= 'lab-restored-000001120000' THEN 2
+ WHEN id <= 'lab-restored-000001680000' THEN 3
+ ELSE 4 END AS load_range,COUNT(*) AS rows_in_range
+FROM hydra_client GROUP BY load_range ORDER BY load_range;
+```
+
+Expect roughly one quarter of the full fixture per range. A small fixture may
+occupy just one range. For a different dataset, choose three ordered boundaries
+from its actual IDs and rerun the count query. Do not use a nullable or LOB
+column for segmentation. The author cloud dataset uses `rds-volume-*` IDs, so
+its rehearsal uses different boundary values with this same DMS mechanism.
+[AWS range-based parallel load](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Tasks.CustomizingTasks.TableMapping.SelectionTransformation.Tablesettings.html).
+
+### Why the UUID rules are required
+
+Hydra stores 17 UUID columns as MySQL `CHAR(36)` and native PostgreSQL `uuid`.
+The explicit column rules send those values through DMS as `string(36)`.
+The target columns remain native UUIDs because target preparation is DO_NOTHING.
+The author rehearsal copied every table successfully without these rules, but
+its first CDC insert failed with PostgreSQL error `22P02`, invalid UUID syntax.
+With these rules, client insert, update and delete replicated successfully.
+
+Check the 17 destinations yourself in the **target PostgreSQL prompt**:
+
+```sql
+SELECT table_name,column_name FROM information_schema.columns
+WHERE table_schema='public' AND udt_name='uuid'
+ORDER BY table_name,column_name;
+```
+
+Compare every result to a `change-data-type` rule above. Add these rules before
+you first start the task. A successful full load does not prove CDC conversion.
+If you already started with different mappings, stop and review the failure and
+recovery point. Do not assume Resume replays a rejected record. The author
+rehearsal repeated the full load into an empty target after correcting the rules.
+Follow the [exact disposable-lab recovery steps](../07-incidents/build.md#6-recover-a-failed-uuid-cdc-test-in-this-disposable-lab) if you encounter that failure before cutover.
+[AWS datatype transformations and restart limitations](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Tasks.CustomizingTasks.TableMapping.SelectionTransformation.Transformations.html).
 
 ## 8. Write and explain the task settings
 
@@ -415,7 +788,7 @@ vi task-settings.json
     "CreatePkAfterFullLoad": false,
     "MaxFullLoadSubTasks": 4,
     "TransactionConsistencyTimeout": 600,
-    "CommitRate": 1000
+    "CommitRate": 250
   },
   "ChangeProcessingDdlHandlingPolicy": {
     "HandleSourceTableDropped": false,
@@ -427,8 +800,12 @@ vi task-settings.json
     "ValidationMode": "ROW_LEVEL",
     "ThreadCount": 4
   },
-  "Logging": {"EnableLogging": true},
-  "ControlTablesSettings": {"ControlSchema": "awsdms_control"},
+  "Logging": {
+    "EnableLogging": true
+  },
+  "ControlTablesSettings": {
+    "ControlSchema": "awsdms_control"
+  },
   "ErrorBehavior": {
     "DataErrorPolicy": "STOP_TASK",
     "DataTruncationErrorPolicy": "STOP_TASK",
@@ -438,19 +815,18 @@ vi task-settings.json
     "ApplyErrorUpdatePolicy": "STOP_TASK"
   }
 }
-
 ```
 
 | Setting | Reason for this lab |
 |---|---|
-| DO_NOTHING | Preserve Hydra's native target DDL; you verified target emptiness yourself |
+| DO_NOTHING | Keep Hydra's existing target tables; you checked that they were empty |
 | Full load + CDC | Copy existing rows, then continue applying new changes |
 | 4 full-load subtasks | Parallel table loading; not a guarantee of parallelizing the one largest table |
 | 64 KiB limited LOB | Bound memory; require measured source values below the limit |
 | Validation enabled | DMS compares migrated rows; inspect pending/failed/suspended counts |
-| No source DDL handling | Freeze schema changes rather than allowing DMS to rewrite native Hydra tables |
-| STOP_TASK error policies | Make mismatches/truncation visible rather than silently continuing |
-| awsdms_control | Isolate DMS control objects from the application schema |
+| No source DDL handling | Keep the table layout fixed during the copy |
+| STOP_TASK error policies | Stop the task if a value cannot be copied correctly |
+| awsdms_control | Keep DMS tracking tables separate from Hydra tables |
 
 If any measured LOB exceeds 65,536 bytes, stop and select/review a suitable LOB
 configuration using AWS's LOB guidance before starting. Changing the limit without
@@ -458,6 +834,11 @@ understanding memory and truncation implications is not a completed exercise.
 [AWS task settings](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Tasks.CustomizingTasks.TaskSettings.html),
 [LOB handling](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Tasks.LOBSupport.html),
 [validation](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Validating.html).
+
+The 250-row commit rate limits per-worker buffering for this table with many
+LOB columns. Four full-load workers can run concurrently. Monitor DMS free memory
+and swap during the load; these settings are a lab starting point, not a
+production throughput guarantee.
 
 ## 9. Create the task, inspect it, then start it yourself
 

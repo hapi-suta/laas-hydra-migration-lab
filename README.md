@@ -1,20 +1,19 @@
-# Hydra Aurora Migration Practice Lab
+# Hydra MySQL to PostgreSQL Migration Practice Lab
 
-A student-built **Concepts → Build → Use → Survive** lab. The student creates
-Aurora MySQL and Aurora PostgreSQL, restores supplied synthetic MySQL data,
+A six-task practice lab built around a Comcast training story. The student creates
+Aurora MySQL and RDS for PostgreSQL, restores supplied synthetic MySQL data,
 installs Hydra, assesses conversion with AWS SCT, configures DMS full load and
 CDC, validates data, cuts over the application and removes the lab.
 
 Start with the [published customer guide](https://hapi-suta.github.io/laas-hydra-migration-lab/)
-or [local guide source](docs/index.md). Every AWS lesson includes Console and
-native CLI alternatives. SQL/application steps are shown explicitly. Nothing is
+or [local guide source](docs/index.md). AWS Console is the primary path, followed by the native CLI alternative. SQL/application steps are shown explicitly. Nothing is
 pre-provisioned for the student by following or opening the guide.
 
 The restore fixture includes schema and synthetic rows. The full profile expands
 to at least 35 GiB of logical client content. It compresses heavily and is not a
 production performance distribution. The learner creates real OAuth state through
 the portal after restoration. See the [validation record](VALIDATION.md) for
-executed tests and remaining cloud rehearsal gaps.
+executed tests and their limits.
 
 Hydra v2.2.0 is the pinned open-source practice baseline. Confirm the customer's
 actual version before treating results as a customer migration plan.

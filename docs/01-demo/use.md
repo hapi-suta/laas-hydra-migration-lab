@@ -4,7 +4,7 @@ Before building, identify where each action belongs:
 
 | Action | Component |
 |---|---|
-| Create a source/target cluster | RDS Console or AWS CLI |
+| Create the source cluster and target DB instance | RDS Console or AWS CLI |
 | Import the supplied logical SQL | MySQL client on your runner |
 | Assess/convert schema | AWS SCT desktop or batch CLI |
 | Move existing rows and subsequent changes | AWS DMS full load and CDC |

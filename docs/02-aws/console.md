@@ -2,7 +2,7 @@
 
 **Environment:** AWS Console, your assigned sandbox, **us-east-1**.
 **CLI equivalent:** [native AWS CLI build path](build.md). **Outcome:** the same private
-network, Aurora source/target, DMS instance and SSM runner.
+network, Aurora MySQL source, RDS PostgreSQL target, DMS instance and SSM runner.
 
 Create this lab yourself from a fresh resource namespace. Choose Console or
 native AWS CLI for each resource; do not execute both creation alternatives for
@@ -11,11 +11,17 @@ prefix such as `hydra-practice-01`; replace `hydra-console` below with that pref
 Tag resources with `Project=your-prefix` and `Owner=your-lab-id`.
 A cost-review tag is a reminder, not automatic shutdown.
 
+## Read the layout first
+
+A **VPC** is a private network in AWS. A **subnet** is a smaller address range inside it. An **Availability Zone** is an AWS location within a Region. Database subnet groups need subnets in two zones even though this practice target runs in one zone.
+
+You create one network for the source and one for the target, then connect them. The databases stay private. Your runner downloads tools through an internet gateway, but accepts no incoming internet connections. You reach it through Session Manager.
+
 ## 1. Verify the account and create VPCs
 
 1. In the top-right account menu, compare the **Account ID** with your assignment.
    In the region selector, choose **US East (N. Virginia)**.
-2. Open **VPC → Your VPCs → Create VPC**. Choose **VPC only**.
+2. Use the Console search box to open **VPC**. Select **Your VPCs** and inspect the existing IPv4 CIDRs. The proposed `10.81.0.0/16` and `10.82.0.0/16` ranges must not overlap other networks that will be connected. If they do, agree on unused ranges with the lab administrator before continuing. Choose **Create VPC → VPC only**.
 3. Create `hydra-console-source` with IPv4 CIDR `10.81.0.0/16`, no IPv6 block,
    default tenancy. Select it, choose **Actions → Edit VPC settings**, and enable
    DNS resolution and DNS hostnames.
@@ -31,7 +37,11 @@ A cost-review tag is a reminder, not automatic shutdown.
 | target | target-db-a | 10.82.10.0/24 | first |
 | target | target-db-b | 10.82.11.0/24 | second |
 
-Do not enable public-IP assignment on database subnets.
+For each subnet, choose the VPC first, enter the name, select its Availability Zone and enter its CIDR. Choose **Create subnet**. On the subnet details, record its subnet ID. Do not enable public-IP assignment on database subnets.
+
+**Expected:** two VPCs and five subnets. Each database VPC has one database subnet in each of your two chosen zones. Save their IDs in the worksheet.
+
+**Why:** the database subnet groups will use these addresses, and the separate networks let you practise a migration across a network connection.
 [AWS VPC creation](https://docs.aws.amazon.com/vpc/latest/userguide/create-vpc.html).
 
 ## 2. Connect the networks
@@ -55,6 +65,8 @@ Do not enable public-IP assignment on database subnets.
 **Check:** the private DB route tables have no default internet route. The runner
 uses a public IP for outbound package/SSM traffic, with no inbound service access.
 
+**Why:** a route tells AWS where to send traffic for an address range. Peering routes let the source and target communicate. The runner's internet route lets it download packages. The database routes stay private.
+
 ## 3. Create security groups
 
 Open **EC2 → Security Groups → Create security group** for each row below. Remove
@@ -70,6 +82,12 @@ bounded training baseline; production egress restriction is a separate exercise.
 | target-db | target | TCP 5432 from runner SG and dms SG |
 | secrets-endpoint | target | TCP 443 from dms SG |
 
+Create runner and dms first, then use their IDs in the database rules. In a database group's **Inbound rules → Edit inbound rules**, add two rules for its port: one with the runner group as source, and one with the DMS group as source. Select **Custom TCP** if you do not see the matching database type. Save the rules.
+
+**Expected:** source-db has two rules for port 3306; target-db has two for port 5432. The runner and DMS groups have no inbound rules. The secrets-endpoint group has one rule for port 443 from DMS.
+
+**Why:** a security group decides which connections are allowed. These rules permit the runner and DMS to reach the databases without opening the databases to everyone.
+
 For a source selector across the peer, enter the other VPC's security-group ID;
 do not substitute `0.0.0.0/0`. Same-region peering must be active first.
 
@@ -82,54 +100,92 @@ do not substitute `0.0.0.0/0`. Same-region peering must be active first.
    `aurora-mysql8.0`, type **DB cluster parameter group**, name `hydra-console-mysql`.
 3. Edit its parameters: `binlog_format=ROW`, `binlog_row_image=FULL`,
    `require_secure_transport=ON` (or `1` where the field uses numeric values).
-4. Create a target **DB cluster parameter group**, family `aurora-postgresql17`,
+4. Create a target **DB parameter group**, family `postgres17`,
    name `hydra-console-pg`, with `rds.force_ssl=1`.
 
-Create these groups before the clusters so startup applies the intended settings.
-For an existing cluster, a static parameter change may require a writer reboot;
+In each subnet-group form, select the correct VPC, select both Availability Zones, add the two database subnets, then choose **Create**. Do not put runner-public in a database subnet group.
+
+**Expected:** the source and target subnet groups each contain two database subnets. The source parameter group is a **cluster** group; the PostgreSQL parameter group is a **DB instance** group.
+
+**Why:** the subnet groups tell RDS where it may place the databases. The source parameters make MySQL record row changes for DMS. The TLS parameters require encrypted database connections.
+
+Create these groups before the databases so startup applies the intended settings.
+For an existing database, a static parameter change may require an instance reboot;
 check the parameter status instead of assuming it applied immediately.
 
-## 5. Create the Aurora source and target
+## 5. Create the Aurora MySQL source and RDS PostgreSQL target
 
 Open **RDS → Databases → Create database → Standard create** twice. Apply these
 settings; expand **Connectivity** and **Additional configuration** where needed.
 
 | Field | Source | Target |
 |---|---|---|
-| Engine | Aurora, MySQL compatible | Aurora, PostgreSQL compatible |
-| Version used in engineering test | 8.0.mysql_aurora.3.13.0 | 17.10 |
-| Identifier | hydra-console-source | hydra-console-target |
+| Engine | Aurora, MySQL compatible | PostgreSQL |
+| Version | 8.0.mysql_aurora.3.13.0 if still available | Select an available RDS PostgreSQL 17.x minor version; record it |
+| Template | Dev/Test | Dev/Test |
+| Identifier (cluster for source, instance for target) | hydra-console-source | hydra-console-target |
 | Credentials | labadmin; manage master password in Secrets Manager | same selection, separate generated secret |
 | Instance | db.r6g.large provisioned | db.r6g.large provisioned |
-| Storage | Aurora Standard, encrypted | Aurora Standard, encrypted |
-| Reader | No additional reader for baseline | No additional reader for baseline |
+| Storage | Aurora Standard, encrypted | General Purpose SSD gp3, 100 GiB, encrypted; storage autoscaling maximum 200 GiB |
+| Availability | No Aurora Replica for this baseline | Single DB instance / Single-AZ; do not choose a Multi-AZ DB cluster |
 | VPC / subnet group | source / source DB group | target / target DB group |
 | Public access | No | No |
 | Existing SG | source-db only | target-db only |
 | Initial database | hydra | hydra |
-| Cluster parameter group | hydra-console-mysql | hydra-console-pg |
+| Parameter group | DB cluster group hydra-console-mysql | DB parameter group hydra-console-pg |
 | Backup retention | 3 days | 3 days |
 | Deletion protection | Enabled | Enabled |
 
-Disable optional paid add-ons not used by this baseline. Select versions that
-remain available and are supported by your DMS release; record any difference
-from the engineering test. Create each database and wait for its writer to be
-**Available**. Copy the cluster **writer endpoint** and the managed secret ARN
-from its details to your private worksheet. Record the actual writer instance
-identifiers as SOURCE_WRITER_ID and TARGET_WRITER_ID; the Console can generate
-names different from the CLI examples. Do not copy a reader endpoint.
-[AWS's Aurora creation procedure](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.CreateInstance.html).
+For the target, choose **PostgreSQL**, not **Aurora (PostgreSQL Compatible)**.
+Under **Availability and durability**, choose the Single-AZ DB instance option.
+For a separate availability exercise, choose **Multi-AZ DB instance deployment**;
+the three-instance Multi-AZ DB cluster option is outside this baseline.
+Under **Connectivity**, choose not to connect automatically to an EC2 resource:
+you already configured the specific runner/DMS security-group paths yourself.
+Under **Additional configuration**, select the target DB parameter group and
+initial database `hydra`. Disable optional paid add-ons not used by this lab.
+
+Select engine versions supported by your DMS release. Use the engine/class
+availability commands in the [CLI path](build.md#6-create-the-aurora-mysql-source-and-rds-postgresql-target)
+if a version or class is missing. The author RDS rehearsal used PostgreSQL 17.11
+on db.r6g.large; availability can differ in your account.
+Create each database and wait for **Available**.
+
+1. Select the **source Aurora cluster**. Copy its **writer endpoint** as SOURCE_HOST.
+   Expand the cluster and record its writer DB instance identifier as SOURCE_WRITER_ID.
+2. Select the **target PostgreSQL DB instance**. Under **Connectivity & security**,
+   copy its **Endpoint** as TARGET_HOST and port `5432`. Record the DB instance
+   identifier as TARGET_DB_ID. Confirm engine PostgreSQL, Publicly accessible No,
+   storage encryption enabled and the intended Single-AZ deployment.
+3. Under **Configuration**, verify the target DB parameter group is `hydra-console-pg`
+   and in-sync. If pending-reboot, use **Actions → Reboot**, wait for Available and
+   check again before continuing. Open **Parameter groups → your target group**
+   and confirm `rds.force_ssl=1`. Later SQL checks must prove TLS is in use;
+   `SHOW rds.force_ssl` is not supported by PostgreSQL SQL.
+4. Record both managed master-secret ARNs in your private worksheet. RDS target
+   storage is allocated explicitly; monitor **Monitoring → FreeStorageSpace**
+   during loading. 100 GiB is a starting size, not a measured capacity guarantee.
+
+[AWS Aurora creation](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.CreateInstance.html),
+[RDS DB instance creation](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_CreateDBInstance.html),
+[RDS creation settings](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_CreateDBInstance.Settings.html),
+[PostgreSQL SSL](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/PostgreSQL.Concepts.General.SSL.html).
+
+**Expected:** the source appears as an Aurora cluster with a writer underneath it. The target appears as a PostgreSQL DB instance. Both are **Available**. You have saved the source writer endpoint and target endpoint; their hostnames will differ from anyone else's lab.
 
 ## 6. Record the administrator secrets
 
 1. Select the source cluster in **RDS → Databases → Configuration**.
 2. Follow its **Master credentials ARN** into Secrets Manager. Record the secret
    ARN, not its password, in your worksheet.
-3. Repeat for the target cluster. They are separate managed secrets.
+3. Repeat for the target DB instance. They are separate managed secrets.
 4. Do not create DMS credentials yet: you create the SQL users and matching
-   dedicated endpoint secrets explicitly in [Module 05](../05-dms/console.md).
+   dedicated endpoint secrets explicitly in [task 4](../05-dms/console.md).
 
-[AWS Aurora managed credentials](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/rds-secrets-manager.html).
+[AWS Aurora managed credentials](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/rds-secrets-manager.html)
+and [RDS DB instance managed credentials](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-secrets-manager.html).
+
+**Why:** you will use each administrator password to create the separate application and migration users. An ARN is AWS's full identifier for a resource; storing the ARN in your notes does not expose its password.
 
 ## 7. Create DMS roles, private service access and replication instance
 
@@ -160,6 +216,8 @@ names different from the CLI examples. Do not copy a reader endpoint.
 [AWS DMS service roles](https://docs.aws.amazon.com/dms/latest/userguide/security-iam.html)
 and [replication instance setup](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_GettingStarted.Replication.html).
 
+**Why:** the DMS role permits network setup and logging. The private Secrets Manager endpoint lets DMS retrieve its credentials without an internet route. The replication instance is the machine that will run your migration task.
+
 ## 8. Create the runner role and EC2 instance
 
 1. In **IAM → Roles → Create role**, choose **AWS service → EC2** and attach
@@ -176,23 +234,15 @@ and [replication instance setup](https://docs.aws.amazon.com/dms/latest/userguid
 5. Select the instance, choose **Connect → Session Manager → Connect**. If unavailable,
    check IAM profile, outbound route, public IP, SSM agent and its logs.
 
+**Expected:** the instance reaches **Running**, its status checks pass, and **Connect → Session Manager** opens a shell. A prompt with a cursor means you are connected; it does not mean the app is installed.
+
 **Check:** no inbound rules on the runner; no public database endpoints; DMS is
 private. Record the runner instance ID.
 
-## 9. Install the application and create SQL users
+## 9. Save your resource details
 
-Continue to [Install the application and create database users](application.md).
-Follow its numbered steps in your Session Manager terminal: install Docker and
-Compose, clone and inspect the application source, download the public RDS CA,
-generate your own secrets, connect with the database clients, execute each SQL
-user/grant statement, initialize the native PostgreSQL schema and verify MySQL is empty for restore.
+Record both database endpoints, the source writer and target instance names, master-secret ARNs, runner ID, network IDs and DMS instance ARN in your worksheet.
 
-The page includes both Console and AWS CLI ways to open the session and retrieve
-managed credentials. Viewing the private portal requires the documented SSM
-port-forward session on your workstation; a Console shell alone cannot forward
-a port to your local browser.
+**Expected:** both databases and the DMS instance show **Available**, and you can open a Session Manager terminal on the runner. The app is not installed yet, so there is no portal to open at this point.
 
-**Checkpoint:** your worksheet, Available database/DMS states, runner Online,
-private routes and SGs, native PostgreSQL migrations complete, and MySQL empty for restore.
-You must obtain these results yourself. The manual Console route has not been
-independently replayed end to end; save your actual results and errors.
+Continue to [task 2: restore data and run Hydra](../lab/02-restore.md). That task installs the application and creates the database users before the restore. Perform the setup once.

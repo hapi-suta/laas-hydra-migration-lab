@@ -19,10 +19,11 @@ variables from these entries with `export VARIABLE=YOUR_RECORDED_VALUE`.
 | PEER / IGW | Peering connection and internet gateway IDs | |
 | SOURCE_SG / TARGET_SG | Database security-group IDs | |
 | RUNNER_SG / DMS_SG / SECRETS_SG | Other security-group IDs | |
-| MYSQL_VERSION / PG_VERSION | Exact selected Aurora versions | |
-| Source / target clusters | Cluster identifiers | |
-| SOURCE_WRITER_ID / TARGET_WRITER_ID | Actual writer instance identifiers | |
-| SOURCE_HOST / TARGET_HOST | Native cluster writer endpoints | |
+| MYSQL_VERSION / PG_VERSION | Exact selected Aurora MySQL / RDS PostgreSQL versions | |
+| Source cluster | Aurora cluster identifier | |
+| SOURCE_WRITER_ID / TARGET_DB_ID | Source writer / target RDS DB instance identifiers | |
+| SOURCE_HOST / TARGET_HOST | Source cluster writer / target DB instance endpoints | |
+| Target storage / availability | Allocated GiB, gp3, Single-AZ or Multi-AZ instance | |
 | Source / target master secret | RDS-managed secret ARNs only | |
 | RUNNER_ID | EC2 instance ID | |
 | Runner root volume | EBS volume ID and DeleteOnTermination | |
@@ -43,7 +44,7 @@ variables from these entries with `export VARIABLE=YOUR_RECORDED_VALUE`.
 
 ## Evidence checklist
 
-- Both private writers Available, DMS Available and runner SSM Online.
+- Private source writer and target DB instance Available, DMS Available and runner SSM Online.
 - Verified source/target TLS, source ROW/FULL binlogs and 72-hour retention.
 - Empty-source check, successful restore exit and exact manifest comparison.
 - Source application login/refresh/revocation and visible API changes.

@@ -23,7 +23,7 @@ variable "mysql_engine_version" {
   type        = string
 }
 variable "postgres_engine_version" {
-  description = "Choose an available Aurora PostgreSQL 17.x version after the preflight."
+  description = "Choose an available RDS PostgreSQL 17.x version after the preflight."
   type        = string
 }
 variable "db_instance_class" {
@@ -40,7 +40,7 @@ variable "create_dms_service_roles" {
   default     = true
 }
 variable "add_readers" {
-  description = "Add one reader per Aurora cluster for failover practice."
+  description = "Add a source Aurora reader for failover practice; the RDS target stays Single-AZ."
   type        = bool
   default     = false
 }

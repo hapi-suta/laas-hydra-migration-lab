@@ -2,8 +2,8 @@
 
 Practice on your own disposable lab. Do not damage a completed customer migration.
 If target readiness fails, leave gateway stopped and inspect target logs with
-`docker compose logs --tail=50 target`. Check the native writer endpoint, TLS CA,
-SQL grants, native schema and unchanged shared secrets from Module 02.
+`docker compose logs --tail=50 target`. Check the target DB instance endpoint, TLS CA,
+SQL grants, native schema and unchanged shared secrets from task 2.
 
 A return to source is only safe if you can prove **no target writes occurred**.
 Target startup itself may write state. If that proof is unavailable, keep traffic

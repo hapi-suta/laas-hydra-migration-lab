@@ -52,7 +52,7 @@ def main():
     script+=command('LoadTrustStore',name='RDS',password=trustpass,file=str(trust))
     tls={'useSSL':'true','requireSSL':'true','verifyServerCertificate':'true','trustServerCertificate':'false','trustStoreAlias':'RDS'}
     script+=command('AddSource',name='MYSQL',vendor='MYSQL',host=cfg['source']['host'],port='3306',user='sct_reader',password=values['SCT_PASSWORD'],**tls)
-    script+=command('AddTarget',name='POSTGRESQL',vendor='AURORA_POSTGRESQL',host=cfg['target']['host'],port='5432',database='sct_compare',user='hydra',password=values['POSTGRES_PASSWORD'],**tls)
+    script+=command('AddTarget',name='POSTGRESQL',vendor='POSTGRESQL',host=cfg['target']['host'],port='5432',database='sct_compare',user='hydra',password=values['POSTGRES_PASSWORD'],**tls)
     script+=command('AddServerMapping',sourceTreePath='Servers.MYSQL',targetTreePath='Servers.POSTGRESQL')
     script+=command('PrintSourceTreeNodeChildren',treePath='Servers.MYSQL')
     if a.action=='assess':

@@ -39,9 +39,9 @@ through the explicit fresh-target process.
 
 ## Case 3. Target lag or resource pressure
 
-Repeat the explicit client and browser operations from Module 05 for a bounded interval. In
+Repeat the explicit client and browser operations from task 4 for a bounded interval. In
 **CloudWatch → Metrics → DMS**, compare CPU, freeable memory, swap/free storage,
-incoming changes and target latency. Compare the target writer's RDS metrics over
+incoming changes and target latency. Compare the target DB instance's RDS metrics over
 the same interval. Record dimensions, units and statistic.
 
 Reduce the workload to its baseline and observe whether lag drains. Investigate

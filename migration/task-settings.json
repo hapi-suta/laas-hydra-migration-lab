@@ -11,7 +11,7 @@
     "CreatePkAfterFullLoad": false,
     "MaxFullLoadSubTasks": 4,
     "TransactionConsistencyTimeout": 600,
-    "CommitRate": 1000
+    "CommitRate": 250
   },
   "ChangeProcessingDdlHandlingPolicy": {
     "HandleSourceTableDropped": false,
@@ -23,8 +23,12 @@
     "ValidationMode": "ROW_LEVEL",
     "ThreadCount": 4
   },
-  "Logging": {"EnableLogging": true},
-  "ControlTablesSettings": {"ControlSchema": "awsdms_control"},
+  "Logging": {
+    "EnableLogging": true
+  },
+  "ControlTablesSettings": {
+    "ControlSchema": "awsdms_control"
+  },
   "ErrorBehavior": {
     "DataErrorPolicy": "STOP_TASK",
     "DataTruncationErrorPolicy": "STOP_TASK",

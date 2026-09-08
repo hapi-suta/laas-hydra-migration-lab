@@ -309,7 +309,7 @@ require the active same-region peering above.
 [AWS SG references over peering](https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-security-groups.html)
 and [authorize ingress](https://docs.aws.amazon.com/cli/latest/reference/ec2/authorize-security-group-ingress.html).
 
-## 5. Create Aurora subnet and parameter groups
+## 5. Create database subnet and parameter groups
 
 ```bash
 aws rds create-db-subnet-group --db-subnet-group-name "$LAB-source" --db-subnet-group-description "$LAB source" --subnet-ids "$SOURCE_A" "$SOURCE_B"
@@ -331,21 +331,32 @@ aws rds modify-db-cluster-parameter-group --db-cluster-parameter-group-name "$LA
 ```
 
 ```bash
-aws rds create-db-cluster-parameter-group --db-cluster-parameter-group-name "$LAB-pg" --db-parameter-group-family aurora-postgresql17 --description "$LAB PostgreSQL TLS"
+aws rds create-db-parameter-group --db-parameter-group-name "$LAB-pg" --db-parameter-group-family postgres17 --description "$LAB PostgreSQL TLS"
 ```
 
 ```bash
-aws rds modify-db-cluster-parameter-group --db-cluster-parameter-group-name "$LAB-pg" --parameters \
+aws rds modify-db-parameter-group --db-parameter-group-name "$LAB-pg" --parameters \
   ParameterName=rds.force_ssl,ParameterValue=1,ApplyMethod=pending-reboot
 ```
+
+```bash
+aws rds describe-db-parameters --db-parameter-group-name "$LAB-pg" \
+  --query "Parameters[?ParameterName=='rds.force_ssl'].{Name:ParameterName,Value:ParameterValue,ApplyMethod:ApplyMethod}" --output table
+```
+
+Require Value=1. This is an RDS parameter-group setting; PostgreSQL SQL `SHOW`
+does not expose it. After creation, check the instance's parameter-group status
+is in-sync and prove a verified TLS connection in the application setup lesson.
+
 
 `ROW` records row changes for CDC; `FULL` includes full before/after row images.
 Native SQL checks later must prove these settings are active. Attaching a group
 is not enough if an existing writer still has a pending reboot.
-[AWS MySQL source prerequisites](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Source.MySQL.html)
-and [Aurora parameter groups](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_WorkingWithParamGroups.html).
+[AWS MySQL source prerequisites](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Source.MySQL.html),
+[Aurora parameter groups](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/USER_WorkingWithParamGroups.html)
+and [RDS PostgreSQL parameters](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Appendix.PostgreSQL.CommonDBATasks.Parameters.html).
 
-## 6. Select engine versions and create both clusters and writers
+## 6. Create the Aurora MySQL source and RDS PostgreSQL target
 
 ```bash
 aws rds describe-db-engine-versions --engine aurora-mysql \
@@ -353,7 +364,7 @@ aws rds describe-db-engine-versions --engine aurora-mysql \
 ```
 
 ```bash
-aws rds describe-db-engine-versions --engine aurora-postgresql \
+aws rds describe-db-engine-versions --engine postgres \
   --query "DBEngineVersions[?starts_with(EngineVersion, '17.')].EngineVersion" --output table
 ```
 
@@ -362,21 +373,23 @@ export MYSQL_VERSION=8.0.mysql_aurora.3.13.0
 ```
 
 ```bash
-export PG_VERSION=17.10
+export PG_VERSION=YOUR_SELECTED_POSTGRES_17_VERSION
 ```
 
-These were available during engineering testing. Confirm they remain listed,
-then check that `db.r6g.large` is orderable for each selected version:
+The MySQL value is the earlier source test version. For PG_VERSION, replace the
+placeholder with an exact 17.x version from the **postgres** engine list above.
+Record it in your worksheet. Do not copy an Aurora PostgreSQL version assumption.
+Check that `db.r6g.large` is orderable for each selected version:
 
 ```bash
 aws rds describe-orderable-db-instance-options --engine aurora-mysql --engine-version "$MYSQL_VERSION" --db-instance-class db.r6g.large --query 'OrderableDBInstanceOptions[].DBInstanceClass'
 ```
 
 ```bash
-aws rds describe-orderable-db-instance-options --engine aurora-postgresql --engine-version "$PG_VERSION" --db-instance-class db.r6g.large --query 'OrderableDBInstanceOptions[].DBInstanceClass'
+aws rds describe-orderable-db-instance-options --engine postgres --engine-version "$PG_VERSION" --db-instance-class db.r6g.large --query 'OrderableDBInstanceOptions[].DBInstanceClass'
 ```
 
-Each must return a nonempty result. Review the cost of two paid Aurora writers,
+Each must return a nonempty result. Review the cost of the Aurora writer and RDS instance,
 DMS, EC2, storage/I/O, private endpoints and public IPv4 before continuing.
 Create the source and target; managed passwords are generated in Secrets Manager:
 
@@ -400,38 +413,45 @@ aws rds create-db-instance --db-instance-identifier "$LAB-source-writer" \
 aws rds wait db-instance-available --db-instance-identifier "$LAB-source-writer"
 ```
 
+The target is an RDS **Single-AZ DB instance** for this practice baseline. Its
+subnet group still contains two AZs. It has 100 GiB encrypted gp3 storage and a
+200 GiB autoscaling ceiling. This is a starting capacity, not a guarantee that
+35 GiB of logical source data fits after indexes, WAL and temporary work. Monitor
+`FreeStorageSpace` during restore/migration and pause if capacity is inadequate.
+For a separate availability exercise, use a **Multi-AZ DB instance deployment**;
+a Multi-AZ DB cluster has a different topology and is outside this baseline.
+[AWS RDS storage](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Storage.html).
+
 ```bash
-aws rds create-db-cluster --db-cluster-identifier "$LAB-target" \
-  --engine aurora-postgresql --engine-version "$PG_VERSION" \
-  --master-username labadmin --manage-master-user-password --database-name hydra \
+export TARGET_DB_ID="$LAB-target"
+```
+
+```bash
+aws rds create-db-instance --db-instance-identifier "$TARGET_DB_ID" \
+  --engine postgres --engine-version "$PG_VERSION" --db-instance-class db.r6g.large \
+  --master-username labadmin --manage-master-user-password --db-name hydra \
   --db-subnet-group-name "$LAB-target" --vpc-security-group-ids "$TARGET_SG" \
-  --db-cluster-parameter-group-name "$LAB-pg" --storage-encrypted \
-  --backup-retention-period 3 --deletion-protection --tags Key=Project,Value="$LAB"
+  --db-parameter-group-name "$LAB-pg" --storage-type gp3 \
+  --allocated-storage 100 --max-allocated-storage 200 --storage-encrypted \
+  --backup-retention-period 3 --deletion-protection --no-multi-az \
+  --no-publicly-accessible --no-auto-minor-version-upgrade --tags Key=Project,Value="$LAB"
 ```
 
 ```bash
-aws rds create-db-instance --db-instance-identifier "$LAB-target-writer" \
-  --db-cluster-identifier "$LAB-target" --engine aurora-postgresql \
-  --db-instance-class db.r6g.large --no-publicly-accessible \
-  --no-auto-minor-version-upgrade --tags Key=Project,Value="$LAB"
-```
-
-```bash
-aws rds wait db-instance-available --db-instance-identifier "$LAB-target-writer"
+aws rds wait db-instance-available --db-instance-identifier "$TARGET_DB_ID"
 ```
 
 A waiter may time out while AWS is still provisioning. Describe the named
-instance and retry the waiter; do not create another cluster to solve a timeout.
-This baseline creates one writer per engine, without reader instances.
+instance and retry the waiter; do not create a duplicate database.
 
 ```bash
 aws rds describe-db-clusters --db-cluster-identifier "$LAB-source" \
-  --query 'DBClusters[0].{State:Status,Writer:Endpoint,Port:Port,Secret:MasterUserSecret.SecretArn}'
+  --query 'DBClusters[0].{State:Status,Engine:Engine,Writer:Endpoint,Port:Port,Encrypted:StorageEncrypted,Secret:MasterUserSecret.SecretArn}'
 ```
 
 ```bash
-aws rds describe-db-clusters --db-cluster-identifier "$LAB-target" \
-  --query 'DBClusters[0].{State:Status,Writer:Endpoint,Port:Port,Secret:MasterUserSecret.SecretArn}'
+aws rds describe-db-instances --db-instance-identifier "$TARGET_DB_ID" \
+  --query 'DBInstances[0].{State:DBInstanceStatus,Engine:Engine,Endpoint:Endpoint,Encrypted:StorageEncrypted,Storage:AllocatedStorage,StorageType:StorageType,MaxStorage:MaxAllocatedStorage,MultiAZ:MultiAZ,Public:PubliclyAccessible,Parameters:DBParameterGroups,Secret:MasterUserSecret.SecretArn}'
 ```
 
 ```bash
@@ -439,26 +459,36 @@ export SOURCE_HOST=$(aws rds describe-db-clusters --db-cluster-identifier "$LAB-
 ```
 
 ```bash
-export TARGET_HOST=$(aws rds describe-db-clusters --db-cluster-identifier "$LAB-target" --query 'DBClusters[0].Endpoint' --output text)
+export TARGET_HOST=$(aws rds describe-db-instances --db-instance-identifier "$TARGET_DB_ID" --query 'DBInstances[0].Endpoint.Address' --output text)
 ```
 
-Record both writer endpoints and managed secret ARNs. Also record the actual
-writer identifiers, so Console-created writers can use the same later steps:
+Record the source writer endpoint, target DB instance endpoint and both managed
+secret ARNs. Record the actual source writer identifier too, because Console
+creation can generate a name different from the CLI example:
 
 ```bash
 export SOURCE_WRITER_ID=$(aws rds describe-db-clusters --db-cluster-identifier "$LAB-source" --query 'DBClusters[0].DBClusterMembers[?IsClusterWriter].DBInstanceIdentifier | [0]' --output text)
 ```
 
+**Expected:** both Available, source engine `aurora-mysql`, target engine `postgres`,
+ports 3306 and 5432, encryption enabled, target Single-AZ, parameter group in-sync,
+and Publicly accessible No on each DB instance. The target must have a DB instance
+endpoint, not an Aurora cluster endpoint. If the target parameter group shows
+pending-reboot, reboot it and wait before the SQL/TLS checks:
+
 ```bash
-export TARGET_WRITER_ID=$(aws rds describe-db-clusters --db-cluster-identifier "$LAB-target" --query 'DBClusters[0].DBClusterMembers[?IsClusterWriter].DBInstanceIdentifier | [0]' --output text)
+aws rds reboot-db-instance --db-instance-identifier "$TARGET_DB_ID"
 ```
 
- **Expected:** Available,
-ports 3306 and 5432, encrypted clusters, private writers. Verify **RDS → Databases
-→ writer → Connectivity & security → Publicly accessible: No**.
+```bash
+aws rds wait db-instance-available --db-instance-identifier "$TARGET_DB_ID"
+```
+
+Skip the reboot if the parameter group is already in-sync.
 [AWS create cluster](https://docs.aws.amazon.com/cli/latest/reference/rds/create-db-cluster.html),
-[create writer](https://docs.aws.amazon.com/cli/latest/reference/rds/create-db-instance.html),
-[managed master passwords](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/rds-secrets-manager.html).
+[RDS create DB instance](https://docs.aws.amazon.com/cli/latest/reference/rds/create-db-instance.html),
+[RDS managed master passwords](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-secrets-manager.html),
+[PostgreSQL TLS parameter](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/PostgreSQL.Concepts.General.SSL.html).
 
 ## 7. Create the runner IAM role and EC2 instance
 
@@ -593,23 +623,21 @@ aws dms describe-replication-instances --filters Name=replication-instance-arn,V
 ```
 
 **Expected:** Available and Public=false. Create endpoint database users, endpoint
-secrets and the separate DMS secrets-access role in Module 05 after initializing
+secrets and the separate DMS secrets-access role in task 4 after initializing
 the schemas. Do not store placeholder credentials now.
 [AWS DMS prerequisites](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Security.html),
 [replication instance CLI](https://docs.aws.amazon.com/cli/latest/reference/dms/create-replication-instance.html),
 [DMS Secrets Manager access](https://docs.aws.amazon.com/dms/latest/userguide/security_iam_secretsmanager.html).
 
-## 9. Record your resources and install Hydra yourself
+## 9. Record your resources
 
 In `worksheet.txt`, record SOURCE_VPC, TARGET_VPC, all five subnets, three route
-tables, PEER, IGW, five SGs, both cluster/writer names and endpoints, both master
+tables, PEER, IGW, five SGs, source cluster/writer names, target DB instance ID and both endpoints, both master
 secret ARNs, RUNNER_ID, SECRETS_VPCE, DMS_ARN and any shared roles you reused.
 These values let you reconnect and later delete only your lab.
 
-Continue to [install the runner packages, create database users and start Hydra](application.md).
-That page contains the actual package, SQL and Docker commands. Do not use the
-optional Terraform or Python bootstrap tools to bypass the learning steps.
+Continue to [task 2: restore data and run Hydra](../lab/02-restore.md). That task installs the packages and creates the SQL users before restoring data. The app is not installed yet; complete its setup once in task 2.
 
-**Checkpoint:** your own worksheet, both private writers Available, DMS Available,
+**Checkpoint:** your own worksheet, the private source writer and target DB instance Available, DMS Available,
 runner Online, correct routes and SGs. Infrastructure availability is not a
 successful migration.

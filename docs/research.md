@@ -37,11 +37,14 @@ Oracle-specific conversion rules are not reused for MySQL; only the documented
 CLI process informs this implementation.
 [AWS SCT CLI engineering walkthrough](https://aws.amazon.com/blogs/database/convert-database-schemas-and-application-sql-using-the-aws-schema-conversion-tool-cli/).
 
-The migration target is **Aurora PostgreSQL**, correcting the original diagram's
-RDS PostgreSQL target. The initial cloud pins selected from the account's live
-orderable versions are Aurora MySQL 3.13.0, Aurora PostgreSQL 17.10, and DMS 3.6.1.
-The customer must rehearse against their actual Hydra and database versions before
-using these results for a production decision.
+The migration is **Aurora MySQL to Amazon RDS for PostgreSQL**, matching the
+customer's corrected requirement and original diagram. The practice target is a
+Single-AZ PostgreSQL 17.x DB instance. Students discover an available minor
+version and class in their region. The earlier engineering target used Aurora
+PostgreSQL; its provisioning, SCT and DMS endpoint results do not establish RDS
+target compatibility. Re-run those checkpoints against the new target.
+[AWS RDS PostgreSQL creation](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_CreateDBInstance.html)
+and [SCT RDS PostgreSQL target selection](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_GettingStarted.SCT.html).
 
 ## Source capture and network
 
@@ -102,9 +105,12 @@ and [monitoring](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Monitorin
 
 ## Costs and evidence limits
 
-On 2026-09-07, the AWS Pricing API returned USD 0.26/hour for each standard db.r6g.large
-Aurora writer in us-east-1. The two writers therefore cost USD 0.52/hour before
-DMS, the runner, storage, I/O, snapshots, IPv4 and network charges. A review-deadline
-tag does not stop billing. Use the cleanup guide and verify residual resources.
-Local container validation, Terraform validation, SCT assessment and a completed
-DMS migration are distinct evidence classes; none substitutes for another.
+Estimate Aurora MySQL and RDS PostgreSQL separately in the
+[AWS Pricing Calculator](https://calculator.aws/). The old two-Aurora-writer
+estimate does not apply to this topology. Include the RDS instance deployment
+option, gp3 allocated storage, any additional IOPS/throughput, backups, DMS,
+runner, interface endpoints and IPv4. Autoscaling can increase allocated storage
+and cost; the worksheet records both its initial value and ceiling. A deadline
+tag does not stop billing. Verify retained resources after teardown.
+Local container checks, configuration validation and a completed AWS migration
+remain separate evidence; none substitutes for another.

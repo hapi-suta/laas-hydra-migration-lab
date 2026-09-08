@@ -2,7 +2,7 @@
 
 **Where:** EC2 runner via Session Manager. **Before starting:** finish either the
 [Console infrastructure steps](console.md) or [AWS CLI steps](build.md). You need
-your two writer endpoints and the two RDS-managed master secret ARNs. No app,
+your source writer and target DB instance endpoints and the two RDS-managed master secret ARNs. No app,
 SQL users, schemas, CA store or runtime configuration is assumed to exist.
 
 ## 1. Connect and install the packages
@@ -162,7 +162,7 @@ values. Keep the generated passwords for the SQL user-creation steps below:
 
 ```text
 MYSQL_HOST=YOUR_SOURCE_WRITER_ENDPOINT
-POSTGRES_HOST=YOUR_TARGET_WRITER_ENDPOINT
+POSTGRES_HOST=YOUR_TARGET_INSTANCE_ENDPOINT
 COMPOSE_FILE=compose.cloud.yaml
 ```
 
@@ -250,17 +250,21 @@ exit
 ```
 
 Hydra owns its application schema; SCT has metadata/read access. DMS receives a
-separate account in Module 05. If a user already exists, investigate whether you
+separate account in task 4. If a user already exists, investigate whether you
 are reusing an old lab rather than blindly rotating its password.
 [AWS SCT MySQL privileges](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Source.MySQL.html).
 
 ## 5. Connect to PostgreSQL and create its schema owner
 
-Retrieve the **target** RDS master secret through the same Console path, or use
-`aws secretsmanager get-secret-value` with your target secret ARN. On the runner:
+Retrieve the **target** master secret through **RDS → Databases → your PostgreSQL
+DB instance → Configuration → Master credentials ARN**, then **Secrets Manager →
+Retrieve secret value**. The CLI alternative is the earlier
+`aws secretsmanager get-secret-value` command with your target secret ARN.
+[AWS RDS managed credentials](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-secrets-manager.html).
+On the runner:
 
 ```bash
-export TARGET_HOST=YOUR_TARGET_WRITER_ENDPOINT
+export TARGET_HOST=YOUR_TARGET_INSTANCE_ENDPOINT
 ```
 
 ```bash
@@ -292,9 +296,11 @@ CREATE DATABASE sct_compare OWNER hydra;
 ```
 
 **Expected:** TLS=true; `hydra` and `sct_compare` databases exist. Explicit role
-membership lets the administrator create an object owned by hydra on the tested
-PostgreSQL release; omitting it caused `must be able to SET ROLE hydra`.
+membership lets the administrator create an object owned by hydra. In earlier
+PostgreSQL testing, omitting it caused `must be able to SET ROLE hydra`.
 `sct_compare` is the safe destination for examining SCT's converted schema.
+`rds.force_ssl` is an RDS parameter-group setting, not a PostgreSQL SQL setting.
+Inspect it using the AWS parameter-group checks in [Build AWS](build.md#5-create-database-subnet-and-parameter-groups). Do not run `SHOW rds.force_ssl`.
 [AWS PostgreSQL target guidance](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Target.PostgreSQL.html)
 and [SCT target privileges](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Source.MySQL.html).
 
@@ -316,7 +322,7 @@ docker compose run --rm migrate-target
 
 Require **Successfully applied migrations** and exit status 0. Keep target Hydra
 stopped. Do not initialize the MySQL source tables here: you will restore the
-supplied schema and data into that empty database in Module 03.
+supplied schema and data into that empty database in task 2.
 
 On **Runner**, as **ec2-user**:
 

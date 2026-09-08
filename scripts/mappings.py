@@ -18,8 +18,23 @@ def build(report, source_database='hydra', target_schema='public'):
     for i, table in enumerate(tables, 1):
         if not table.get('column_match') or not table.get('primary_key'):
             raise ValueError('Resolve missing columns/primary keys: ' + table['table'])
-        rules.append({'rule-type': 'selection', 'rule-id': str(i), 'rule-name': 'include-' + str(i), 'object-locator': {'schema-name': source_database, 'table-name': table['table']}, 'rule-action': 'include'})
+        rules.append({'rule-type': 'selection', 'rule-id': str(i), 'rule-name': 'include-' + str(i), 'object-locator': {'schema-name': source_database, 'table-name': table['table']}, 'rule-action': 'explicit'})
     rules.append({'rule-type': 'transformation', 'rule-id': str(len(rules) + 1), 'rule-name': 'target-schema', 'rule-target': 'schema', 'object-locator': {'schema-name': source_database}, 'rule-action': 'rename', 'value': target_schema})
+    for table in tables:
+        for column, target_type in table.get('target_columns', {}).items():
+            if target_type != 'uuid':
+                continue
+            if table.get('source_columns', {}).get(column) not in ('char', 'varchar'):
+                raise ValueError('Review UUID source type: ' + table['table'] + '.' + column)
+            rules.append({
+                'rule-type': 'transformation', 'rule-id': str(len(rules) + 1),
+                'rule-name': 'uuid-' + table['table'] + '-' + column,
+                'rule-target': 'column',
+                'object-locator': {'schema-name': source_database,
+                                   'table-name': table['table'], 'column-name': column},
+                'rule-action': 'change-data-type',
+                'data-type': {'type': 'string', 'length': 36},
+            })
     return {'rules': rules}
 
 

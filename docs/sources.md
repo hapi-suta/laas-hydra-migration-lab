@@ -14,6 +14,13 @@
 - [DMS DDL handling](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Tasks.CustomizingTasks.TaskSettings.DDLHandling.html).
 - [DMS validation](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Validating.html).
 - [DMS monitoring](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Monitoring.html).
+- [Create an RDS DB instance](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_CreateDBInstance.html).
+- [RDS creation settings](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_CreateDBInstance.Settings.html).
+- [RDS PostgreSQL parameters](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Appendix.PostgreSQL.CommonDBATasks.Parameters.html).
+- [RDS PostgreSQL TLS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/PostgreSQL.Concepts.General.SSL.html).
+- [RDS storage](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Storage.html).
+- [RDS managed credentials](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-secrets-manager.html).
+- [RDS instance deletion](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_DeleteInstance.html).
 - [DMS supported targets](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Introduction.Targets.html).
 
 ## Assumptions that must be checked
@@ -21,7 +28,9 @@
 | Item | Current demo decision |
 |---|---|
 | Hydra release | v2.2.0, provisional open-source baseline |
-| Target | Aurora PostgreSQL 17.x, regional version selected explicitly |
+| Source | Aurora MySQL 3.x, cluster with one writer |
+| Target | RDS for PostgreSQL 17.x, Single-AZ DB instance, regional version selected explicitly |
+| Target storage | 100 GiB encrypted gp3, autoscaling maximum 200 GiB; measure actual capacity needs |
 | Network | One sandbox account, two VPCs, direct private peering |
 | Application hosting | Docker on an SSM runner; EKS is not provisioned |
 | Dataset | 35 GiB client/metadata-heavy scale profile plus real API workload |

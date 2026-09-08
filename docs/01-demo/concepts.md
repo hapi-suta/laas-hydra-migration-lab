@@ -10,7 +10,7 @@ This makes migration behavior visible: preserving rows is useful only if the tar
 
 The local Compose file starts MySQL and PostgreSQL, initializes their schemas with Hydra's own migrations, and starts only source Hydra. Target Hydra has a separate Compose profile, preventing it from creating application state while the destination is being prepared.
 
-The local database ports bind to loopback: MySQL 13306 and PostgreSQL 15432. Source admin is 4445; target admin is 5445 when started. In AWS, database connections use the native private Aurora hostnames and verify TLS certificates. The HTTP practice portal is reached through an SSM tunnel.
+The local database ports bind to loopback: MySQL 13306 and PostgreSQL 15432. Source admin is 4445; target admin is 5445 when started. In AWS, database connections use the native private database hostnames and verify TLS certificates. The HTTP practice portal is reached through an SSM tunnel.
 
 **Predict before building:** if PostgreSQL has an empty Hydra schema and the target starts, will an existing MySQL refresh token work? Explain why neither an empty schema nor a healthy container proves a successful migration.
 

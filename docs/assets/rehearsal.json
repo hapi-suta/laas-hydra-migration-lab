@@ -1,0 +1,429 @@
+{
+  "completed_at_utc": "2026-09-08T04:03:57.743564+00:00",
+  "pass": true,
+  "topology": {
+    "source": "Aurora MySQL 3.13.0",
+    "target": "RDS PostgreSQL 17.11",
+    "hydra": "2.2.0",
+    "dms": "3.6.1",
+    "sct_build": 677,
+    "network": "One AWS account, two peered VPCs, private databases and DMS, EC2 application runner"
+  },
+  "dataset": {
+    "synthetic": true,
+    "client_rows": 2172001,
+    "logical_client_bytes": 37590483214,
+    "logical_client_gib": 35.0089,
+    "largest_lob_bytes": 17260,
+    "profile": "Synthetic metadata-heavy client volume plus API OAuth activity",
+    "full_downloadable_fixture_import_tested": false
+  },
+  "sct": {
+    "pass": true,
+    "comparison_tables": 15,
+    "reviewed_json_columns": 17,
+    "reviewed_date_defaults": 12,
+    "foreign_keys": 28,
+    "removed_legacy_oids_clauses": 15,
+    "repaired_acr_default": true,
+    "restored_flow_check": true,
+    "application_target": "native Hydra schema, unchanged"
+  },
+  "dms": {
+    "pass": true,
+    "full_load_seconds": 1196.85,
+    "tables": [
+      {
+        "table": "hydra_client",
+        "full_load_rows": 2172001,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 1,
+        "cdc_updates": 1,
+        "cdc_deletes": 1
+      },
+      {
+        "table": "hydra_jwk",
+        "full_load_rows": 1,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 1,
+        "cdc_updates": 0,
+        "cdc_deletes": 0
+      },
+      {
+        "table": "hydra_oauth2_access",
+        "full_load_rows": 137,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 4,
+        "cdc_updates": 0,
+        "cdc_deletes": 2
+      },
+      {
+        "table": "hydra_oauth2_authentication_session",
+        "full_load_rows": 6,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 2,
+        "cdc_updates": 0,
+        "cdc_deletes": 0
+      },
+      {
+        "table": "hydra_oauth2_code",
+        "full_load_rows": 6,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 2,
+        "cdc_updates": 2,
+        "cdc_deletes": 0
+      },
+      {
+        "table": "hydra_oauth2_flow",
+        "full_load_rows": 6,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 2,
+        "cdc_updates": 0,
+        "cdc_deletes": 0
+      },
+      {
+        "table": "hydra_oauth2_jti_blacklist",
+        "full_load_rows": 0,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 0,
+        "cdc_updates": 0,
+        "cdc_deletes": 0
+      },
+      {
+        "table": "hydra_oauth2_logout_request",
+        "full_load_rows": 0,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 0,
+        "cdc_updates": 0,
+        "cdc_deletes": 0
+      },
+      {
+        "table": "hydra_oauth2_obfuscated_authentication_session",
+        "full_load_rows": 0,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 0,
+        "cdc_updates": 0,
+        "cdc_deletes": 0
+      },
+      {
+        "table": "hydra_oauth2_oidc",
+        "full_load_rows": 6,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 2,
+        "cdc_updates": 0,
+        "cdc_deletes": 0
+      },
+      {
+        "table": "hydra_oauth2_pkce",
+        "full_load_rows": 0,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 2,
+        "cdc_updates": 0,
+        "cdc_deletes": 2
+      },
+      {
+        "table": "hydra_oauth2_refresh",
+        "full_load_rows": 9,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 4,
+        "cdc_updates": 2,
+        "cdc_deletes": 0
+      },
+      {
+        "table": "hydra_oauth2_trusted_jwt_bearer_issuer",
+        "full_load_rows": 0,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 0,
+        "cdc_updates": 0,
+        "cdc_deletes": 0
+      },
+      {
+        "table": "networks",
+        "full_load_rows": 1,
+        "validation": "Validated",
+        "failed": 0,
+        "pending": 0,
+        "suspended": 0,
+        "cdc_inserts": 0,
+        "cdc_updates": 0,
+        "cdc_deletes": 0
+      }
+    ]
+  },
+  "cdc": {
+    "pass": true,
+    "checks": [
+      "UUID network ID",
+      "Unicode",
+      "nested JSON and null",
+      "16,000-character metadata payload",
+      "boolean change"
+    ],
+    "operations": [
+      {
+        "operation": "insert",
+        "pass": true,
+        "seconds": 6.04
+      },
+      {
+        "operation": "update",
+        "pass": true,
+        "seconds": 6.02
+      },
+      {
+        "operation": "delete",
+        "pass": true,
+        "seconds": 4.03
+      }
+    ]
+  },
+  "reconciliation": {
+    "pass": true,
+    "method": "Every selected row, canonical SHA256 sum and exact count; complete disjoint ranges with writers fenced",
+    "tables": [
+      {
+        "table": "hydra_client",
+        "source": {
+          "rows": 2172001,
+          "sha256_sum": "93495aaed150cbb011721f7ae0f8f1d48ceab6211f1fd73217dcf61a493bcf0e"
+        },
+        "target": {
+          "rows": 2172001,
+          "sha256_sum": "93495aaed150cbb011721f7ae0f8f1d48ceab6211f1fd73217dcf61a493bcf0e"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_jwk",
+        "source": {
+          "rows": 2,
+          "sha256_sum": "f82372ebbbed4584164fb462b8b677d205a9fc4214068f8fbd20cca7486687cb"
+        },
+        "target": {
+          "rows": 2,
+          "sha256_sum": "f82372ebbbed4584164fb462b8b677d205a9fc4214068f8fbd20cca7486687cb"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_oauth2_access",
+        "source": {
+          "rows": 139,
+          "sha256_sum": "0b387f0611534a70e7d2a7a2ccddfbf106fcf81cbdd0cb19a9d144b2dc918434"
+        },
+        "target": {
+          "rows": 139,
+          "sha256_sum": "0b387f0611534a70e7d2a7a2ccddfbf106fcf81cbdd0cb19a9d144b2dc918434"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_oauth2_authentication_session",
+        "source": {
+          "rows": 8,
+          "sha256_sum": "e02a3687c8daca6e9c51988ea146e4739b69baaa967259619b48f9f4616df425"
+        },
+        "target": {
+          "rows": 8,
+          "sha256_sum": "e02a3687c8daca6e9c51988ea146e4739b69baaa967259619b48f9f4616df425"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_oauth2_code",
+        "source": {
+          "rows": 8,
+          "sha256_sum": "31e9d124cd15d0e92ce48fb0fcd5927c4ebf76236fa593b7a5e6e57c8cacd55a"
+        },
+        "target": {
+          "rows": 8,
+          "sha256_sum": "31e9d124cd15d0e92ce48fb0fcd5927c4ebf76236fa593b7a5e6e57c8cacd55a"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_oauth2_flow",
+        "source": {
+          "rows": 8,
+          "sha256_sum": "07b870f3832319daf34ffd97f411fcf513d32ba589ce74ce1be0519984adab61"
+        },
+        "target": {
+          "rows": 8,
+          "sha256_sum": "07b870f3832319daf34ffd97f411fcf513d32ba589ce74ce1be0519984adab61"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_oauth2_jti_blacklist",
+        "source": {
+          "rows": 0,
+          "sha256_sum": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "target": {
+          "rows": 0,
+          "sha256_sum": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_oauth2_logout_request",
+        "source": {
+          "rows": 0,
+          "sha256_sum": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "target": {
+          "rows": 0,
+          "sha256_sum": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_oauth2_obfuscated_authentication_session",
+        "source": {
+          "rows": 0,
+          "sha256_sum": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "target": {
+          "rows": 0,
+          "sha256_sum": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_oauth2_oidc",
+        "source": {
+          "rows": 8,
+          "sha256_sum": "29b487118e744316ee3b7d770aad52f430da6fa674e516849bfccfe1e93d1db7"
+        },
+        "target": {
+          "rows": 8,
+          "sha256_sum": "29b487118e744316ee3b7d770aad52f430da6fa674e516849bfccfe1e93d1db7"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_oauth2_pkce",
+        "source": {
+          "rows": 0,
+          "sha256_sum": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "target": {
+          "rows": 0,
+          "sha256_sum": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_oauth2_refresh",
+        "source": {
+          "rows": 13,
+          "sha256_sum": "8899ee2861a056129af0d306823de709c6254cbd25bec80c00c88216233f5ca2"
+        },
+        "target": {
+          "rows": 13,
+          "sha256_sum": "8899ee2861a056129af0d306823de709c6254cbd25bec80c00c88216233f5ca2"
+        },
+        "pass": true
+      },
+      {
+        "table": "hydra_oauth2_trusted_jwt_bearer_issuer",
+        "source": {
+          "rows": 0,
+          "sha256_sum": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "target": {
+          "rows": 0,
+          "sha256_sum": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "pass": true
+      },
+      {
+        "table": "networks",
+        "source": {
+          "rows": 1,
+          "sha256_sum": "7484517b73a6d24465b76e841af36dc57563a40cd26d5ce66f7ebb69be43f3fb"
+        },
+        "target": {
+          "rows": 1,
+          "sha256_sum": "7484517b73a6d24465b76e841af36dc57563a40cd26d5ce66f7ebb69be43f3fb"
+        },
+        "pass": true
+      }
+    ],
+    "seconds": 1640
+  },
+  "integrity": {
+    "pass": true,
+    "foreign_keys_checked": 28,
+    "orphans": 0,
+    "owned_sequences_reset": 2
+  },
+  "application": {
+    "pass": true,
+    "retained_access": true,
+    "retained_refresh": true,
+    "new_login": true,
+    "new_refresh": true,
+    "revocation": true,
+    "issuer_unchanged": true,
+    "jwks_unchanged": true,
+    "portal_preserved": true,
+    "seconds_from_fence_to_target_discovery": 1996.4
+  },
+  "browser": {
+    "pass": true,
+    "backend": "AWS RDS PostgreSQL",
+    "retained_access": true,
+    "retained_refresh": true,
+    "subject_unchanged": true,
+    "new_login": true,
+    "new_refresh": true,
+    "revoked_refresh_rejected": true,
+    "signed_out_access_denied": true,
+    "time": "2026-09-08T04:01:16.474Z"
+  },
+  "limits": [
+    "Author bulk data used generated SQL inserts. The complete downloadable 35 GiB fixture was not imported in this AWS rehearsal.",
+    "AWS Console and SCT desktop GUI instructions follow official documentation; they were not individually replayed through every screen.",
+    "Synthetic repeated client metadata is not a measured customer workload or production performance benchmark."
+  ]
+}

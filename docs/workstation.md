@@ -2,7 +2,7 @@
 
 Choose the instructions for your workstation. These tools let you authenticate
 and open SSM tunnels. AWS resource creation can use CloudShell, which already
-includes AWS CLI. SCT desktop installation is in [Module 04](04-sct/console.md).
+includes AWS CLI. SCT desktop installation is in [task 3](04-sct/console.md).
 
 ## 1. Install AWS CLI v2
 

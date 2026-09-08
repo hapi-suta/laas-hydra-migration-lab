@@ -69,9 +69,10 @@ and [Ory versioned schema source](https://github.com/ory/hydra/tree/v2.2.0).
 
 ## 2. Work through the SCT action items rather than accepting them blindly
 
-SCT build 677 in the engineering assessment reported 17 JSON-type action items
-and 12 date/default review items. Those are observations for the pinned source,
-not results you can assume for your own version. Generate your own report.
+The SCT build 677 assessment against RDS PostgreSQL 17.11 reported 17 JSON-type
+action items and 12 date/default review items. The raw export did not apply
+until the corrections below were made. Repeat the assessment for your own target.
+Use the following inventory as a comparison aid, not as your assessment result.
 
 | Object/type | What to compare | Decision to verify |
 |---|---|---|
@@ -149,6 +150,145 @@ native Hydra definition / chosen mapping / reason / verification query**.
 Complete each migration-relevant item before starting DMS.
 [AWS assessment reports](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_AssessmentReport.html)
 and [AWS PostgreSQL target behavior](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Target.PostgreSQL.html).
+
+### Apply the corrections found in the RDS rehearsal
+
+Keep the original export. Open a copy named `evidence/sct/reviewed.sql` in your
+editor. Make these changes only after comparing your source and native target
+catalogs. They describe the tested Hydra v2.2.0 export from SCT build 677.
+
+1. For the 17 JSON columns listed above, change SCT's `VARCHAR(8000)` to `JSONB`.
+   If a default exists, copy that column's actual native PostgreSQL default.
+   An array default is `'[]'::jsonb`; an object default is `'{}'::jsonb`.
+   MySQL `_utf8mb4` literals and MySQL backslash quoting cannot be pasted into
+   PostgreSQL. Leave columns with no default without a default.
+2. For the 12 timestamp columns listed above, replace SCT's
+   `DEFAULT 'epoch'::TIMESTAMP` with the verified native `DEFAULT now()`.
+   The epoch is a fixed historical instant, not the current time.
+3. Remove each obsolete `WITH (OIDS=FALSE)` table option, retaining the closing
+   parenthesis and semicolon. The tested export contained 15 such clauses.
+   PostgreSQL 17 does not accept that old table option.
+4. In `hydra_oauth2_flow`, replace the incorrectly escaped `acr` default with
+   `acr TEXT NOT NULL DEFAULT ''`, preserving the comma if another column follows.
+   The native target uses an empty string here.
+5. SCT exported `ADD CONSTRAINT hydra_oauth2_flow_chk null;`. Replace `null`
+   with the actual equivalent CHECK expression. Inspect the source in MySQL:
+
+```sql
+SELECT constraint_name,check_clause
+FROM information_schema.check_constraints
+WHERE constraint_schema='hydra';
+```
+
+In the **native PostgreSQL hydra database**, get the corresponding definition:
+
+```sql
+SELECT conname,pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE contype='c' AND conrelid='public.hydra_oauth2_flow'::regclass;
+```
+
+Compare the complete conditions: allowed flow states and the fields that must
+be non-NULL for each state. In this pinned schema they are equivalent. Copy the
+complete returned `CHECK (...)` expression after
+`ADD CONSTRAINT hydra_oauth2_flow_chk` in the comparison SQL. Retain the final
+semicolon. Do not delete this constraint to get past the syntax error.
+
+### Put the reviewed SQL on the runner
+
+If you used SCT on the runner, your file is already at `evidence/sct/reviewed.sql`; continue to **Apply the reviewed file** below.
+
+If you used SCT desktop, save your edited file as `reviewed.sql` on your workstation. Transfer this SQL file only, not your SCT project or connection logs.
+
+On **Windows**, open PowerShell in the folder containing `reviewed.sql` and run:
+
+```powershell
+Get-FileHash .\reviewed.sql -Algorithm SHA256
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("$PWD\reviewed.sql")) | Set-Clipboard
+```
+
+The first command prints the file's SHA-256 checksum. Save it. The second copies the file as encoded text to your clipboard and normally prints nothing.
+
+On **Linux**, open a workstation terminal in that folder and run:
+
+```bash
+sha256sum reviewed.sql
+base64 -w0 reviewed.sql
+```
+
+Save the checksum and copy the complete encoded line. Then, in your **runner Session Manager shell**, as ec2-user in `/opt/hydra-practice`:
+
+```bash
+mkdir -p evidence/sct
+chmod 700 evidence/sct
+vi evidence/sct/reviewed.sql.b64
+```
+
+Press **i**, paste the encoded text, press **Esc**, then type **:wq** and press **Enter**. Decode it and check that the file arrived unchanged:
+
+```bash
+base64 -d evidence/sct/reviewed.sql.b64 > evidence/sct/reviewed.sql
+sha256sum evidence/sct/reviewed.sql
+```
+
+**Expected:** the runner checksum matches the workstation checksum exactly, ignoring letter case. If it differs or decoding fails, correct the transfer before continuing.
+
+### Apply the reviewed file
+
+On the runner, set the target endpoint from your worksheet. This command stores the value in your current terminal; it normally prints nothing:
+
+```bash
+export TARGET_HOST=YOUR_TARGET_INSTANCE_ENDPOINT
+```
+
+Open the PostgreSQL client against **sct_compare**. The `-v` option makes your reviewed file visible inside the client container:
+
+```bash
+docker run --rm -it --network host -e PSQL_HISTORY=/dev/null \
+  -v "$PWD/runtime/certs:/certs:ro" -v "$PWD/evidence/sct:/review:ro" postgres:17.4 \
+  psql "host=$TARGET_HOST port=5432 dbname=sct_compare user=hydra sslmode=verify-full sslrootcert=/certs/global-bundle.pem" -W
+```
+
+Enter the target `hydra` password from task 2. At the **psql prompt**, check the destination first:
+
+```sql
+SELECT current_database(),current_user;
+```
+
+**Expected:** `sct_compare` and `hydra`. If the database is `hydra`, exit with `\q` and correct the connection. Once the destination is correct, run:
+
+```sql
+\set ON_ERROR_STOP on
+BEGIN;
+\i /review/reviewed.sql
+COMMIT;
+```
+
+**Expected:** SQL completion messages, including `CREATE TABLE` and `ALTER TABLE`, followed by `COMMIT`, with no `ERROR`. A transaction keeps a failed import from leaving only part of the schema behind. If an error occurs, run `ROLLBACK;`, fix the reviewed file and retry. Keep the error in your notes.
+
+In the same **sct_compare** connection, verify:
+
+```sql
+SELECT current_database();
+SELECT count(*) AS tables FROM information_schema.tables
+WHERE table_schema='hydra' AND table_type='BASE TABLE';
+SELECT count(*) AS jsonb_columns FROM information_schema.columns
+WHERE table_schema='hydra' AND data_type='jsonb';
+SELECT count(*) AS current_time_defaults FROM information_schema.columns
+WHERE table_schema='hydra' AND column_default='now()';
+SELECT count(*) AS foreign_keys FROM pg_constraint co
+JOIN pg_namespace ns ON ns.oid=co.connamespace
+WHERE ns.nspname='hydra' AND co.contype='f';
+SELECT conname,pg_get_constraintdef(oid) FROM pg_constraint
+WHERE contype='c' AND conrelid='hydra.hydra_oauth2_flow'::regclass;
+```
+
+The corrected RDS rehearsal returned **15 tables, 17 JSONB columns, 12 now()
+defaults, 28 foreign keys**, and the restored flow CHECK. The comparison schema
+still illustrates conversion differences such as UUID strings and integer
+booleans; the application destination remains its native `hydra.public` schema.
+[AWS SCT assessment workflow](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_AssessmentReport.html)
+and [PostgreSQL 17 CREATE TABLE syntax](https://www.postgresql.org/docs/17/sql-createtable.html).
 
 ## 3. Measure LOB sizes across the actual source schema
 
@@ -263,6 +403,5 @@ relationships. `DO_NOTHING` does not clear a target on your behalf.
 
 Keep your source/target inventory, SCT assessment/converted SQL, completed
 comparison worksheet, LOB maxima, target counts and stopped-target observation.
-Then write the [explicit DMS mappings](../05-dms/build.md#7-write-and-review-the-exact-table-mappings)
-from this reviewed inventory. An optional checker can supplement these steps;
+Continue to [task 4](../lab/04-dms.md) and use this reviewed inventory to check its explicit DMS mappings. An optional checker can supplement these steps;
 it cannot replace understanding and resolving a mismatch.

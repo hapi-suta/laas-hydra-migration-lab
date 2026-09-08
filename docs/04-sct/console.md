@@ -20,21 +20,71 @@ assessment and compares it with Hydra's native PostgreSQL schema.
 3. Follow [AWS package verification](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.InstallValidation.html).
    For Windows, inspect the MSI digital signature before installing. Record the
    installed SCT build from **Help → About**.
-4. Download MySQL Connector/J and PostgreSQL JDBC JARs from the links in
-   [CLI step 1](build.md#1-install-java-sct-and-both-jdbc-drivers). Extract the
-   MySQL distribution if downloading its ZIP from the vendor site.
+4. Download the [MySQL Connector/J JAR](https://repo.maven.apache.org/maven2/com/mysql/mysql-connector-j/26.7.0/mysql-connector-j-26.7.0.jar) and [PostgreSQL JDBC JAR](https://jdbc.postgresql.org/download/postgresql-42.7.13.jar) to a folder on your workstation. Keep the `.jar` files; SCT opens them directly.
 5. In **SCT → Settings → Global settings → Drivers**, choose the MySQL and
    PostgreSQL driver files, then save. Record both driver versions.
-6. In RDS, record your two cluster writer endpoints. The comparison target
-   database is **sct_compare**, which you created in Module 02.
+6. In RDS, record your source cluster writer endpoint and target DB instance endpoint. The comparison target
+   database is **sct_compare**, which you created in task 2.
 
 ## 2. Create your trust store and private connections
 
-Create the RDS trust store yourself using [CLI step 2](build.md#2-build-your-rds-trust-store).
-The Linux commands can run on your supported Linux workstation. For Windows,
-use the runner to create the public-CA JKS, then transfer it to your workstation
-using Session Manager's file text route below. This file contains public
-certificates, not private keys or database credentials.
+The trust store tells SCT which database certificates to trust. Create it on the runner, then copy its public certificates to your workstation. It contains no database password.
+
+In the AWS Console, open **EC2 → Instances → your runner → Connect → Session Manager → Connect**. Run:
+
+```bash
+sudo su - ec2-user
+cd /opt/hydra-practice
+sudo dnf install -y java-17-amazon-corretto-headless
+mkdir -p runtime/sct
+chmod 700 runtime/sct
+```
+
+**Expected:** Java installs successfully. The directory and permission commands normally print nothing when they succeed.
+
+
+Download the public regional CA bundle:
+
+```bash
+curl -fL https://truststore.pki.rds.amazonaws.com/us-east-1/us-east-1-bundle.pem -o runtime/sct/rds-region.pem
+```
+
+Split the PEM bundle into individual certificates. This awk command copies each
+complete certificate to its own file; it does not contact a database:
+
+```bash
+awk '/-----BEGIN CERTIFICATE-----/{n++; f=sprintf("runtime/sct/ca-%d.pem",n)} f{print > f} /-----END CERTIFICATE-----/{close(f); f=""}' runtime/sct/rds-region.pem
+```
+
+Choose a long alphanumeric trust-store password privately. Avoid apostrophes
+and newlines because the later SCT CLI parameter uses single-quoted text. This protects a store containing public
+CA certificates, not database passwords:
+
+```bash
+read -rsp 'New SCT trust-store password: ' SCT_TRUST_PASSWORD
+```
+
+```bash
+export SCT_TRUST_PASSWORD
+```
+
+Import every regional certificate into a new JKS store:
+
+```bash
+for cert in runtime/sct/ca-*.pem; do
+  keytool -importcert -noprompt -alias "$(basename "$cert" .pem)" \
+    -file "$cert" -keystore runtime/sct/rds-trust.jks -storetype JKS \
+    -storepass:env SCT_TRUST_PASSWORD || break
+done
+```
+
+```bash
+keytool -list -keystore runtime/sct/rds-trust.jks -storepass:env SCT_TRUST_PASSWORD
+```
+
+Require one trusted entry per downloaded certificate. If an alias exists from an
+earlier attempt, inspect the existing store rather than replacing it blindly.
+[AWS RDS CA bundles](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.SSL.html).
 
 On the runner, run `base64 -w0 runtime/sct/rds-trust.jks`. Copy the single line
 into a local file named `rds-trust.b64` using Notepad. In **Windows PowerShell**, in
@@ -56,7 +106,7 @@ aws ssm start-session --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --docu
 ```
 
 ```bash
-aws ssm start-session --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["YOUR_TARGET_WRITER_ENDPOINT"],"portNumber":["5432"],"localPortNumber":["15432"]}'
+aws ssm start-session --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{"host":["YOUR_TARGET_INSTANCE_ENDPOINT"],"portNumber":["5432"],"localPortNumber":["15432"]}'
 ```
 
 Replace all three placeholders in each command. Windows users can execute these
@@ -73,7 +123,7 @@ native endpoint names from RDS:
 
 ```text
 127.0.0.1 YOUR_SOURCE_WRITER_ENDPOINT
-127.0.0.1 YOUR_TARGET_WRITER_ENDPOINT
+127.0.0.1 YOUR_TARGET_INSTANCE_ENDPOINT
 ```
 
 SCT then uses those native names on local ports 13306 and 15432. The runner still
@@ -88,7 +138,7 @@ or disable certificate checking to resolve a hostname mismatch.
 2. Choose **Add source → MySQL → Next**.
 3. Enter a connection name such as `HYDRA_MYSQL`. Use the native source hostname
    and the applicable direct/tunnel port.
-4. Enter the dedicated `sct_reader` credential you created in Module 02.
+4. Enter the dedicated `sct_reader` credential you created in task 2.
    It has SELECT and SHOW VIEW access for this isolated lab. Do not use the DMS
    replication user as a substitute for SCT's required privileges.
 5. Select **Use SSL**. On the SSL tab select **Require SSL** and **Verify server
@@ -100,8 +150,9 @@ or disable certificate checking to resolve a hostname mismatch.
 
 ## 4. Add the comparison target and mapping
 
-1. Choose **Add target → Amazon Aurora PostgreSQL**.
-2. Enter a distinct connection name such as `SCT_COMPARE`, native target writer
+1. Choose **Add target → Amazon RDS for PostgreSQL**.
+   [AWS SCT RDS PostgreSQL walkthrough](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_GettingStarted.SCT.html).
+2. Enter a distinct connection name such as `SCT_COMPARE`, native target DB instance
    hostname, direct/tunnel port, and database **sct_compare**.
 3. Use the lab's schema-owner credentials and the JDBC driver's verified TLS
    settings/trust store. This role must be able to create objects in sct_compare.
@@ -127,8 +178,11 @@ or disable certificate checking to resolve a hostname mismatch.
 2. Use **Save as SQL** on the converted target objects. Review the SQL before
    **Apply to database**. Confirm the connection is **sct_compare** and that no
    selected operation targets the application's `hydra` database.
-3. Apply the reviewed comparison conversion. Inspect objects and any conversion
-   errors in the GUI; retain failed action items rather than suppressing them.
+3. Complete the [tested export repairs](schema-checks.md#apply-the-corrections-found-in-the-rds-rehearsal)
+   before applying. If you edited the exported SQL, use the linked psql procedure
+   to apply that exact reviewed file. The GUI target tree does not automatically
+   inherit edits made to an exported file. Inspect the resulting objects and
+   retain failed action items rather than suppressing them.
 4. Compare the result to the native `hydra.public` schema using the runner's
    inventory and SQL catalog checks. Specifically inspect UUIDs versus strings,
    booleans versus integers, JSONB, timestamp precision, keys/indexes, defaults,

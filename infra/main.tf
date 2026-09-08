@@ -126,25 +126,26 @@ resource "aws_rds_cluster_parameter_group" "mysql" {
     value = "ON"
   }
 }
-resource "aws_rds_cluster_parameter_group" "postgres" {
+resource "aws_db_parameter_group" "postgres" {
   name   = "${var.name}-postgres"
-  family = "aurora-postgresql17"
+  family = "postgres17"
   parameter {
-    name  = "rds.force_ssl"
-    value = "1"
+    name         = "rds.force_ssl"
+    value        = "1"
+    apply_method = "pending-reboot"
   }
 }
 resource "aws_rds_cluster" "db" {
-  for_each                        = local.networks
+  for_each                        = { source = local.networks.source }
   cluster_identifier              = "${var.name}-${each.key}"
-  engine                          = each.key == "source" ? "aurora-mysql" : "aurora-postgresql"
-  engine_version                  = each.key == "source" ? var.mysql_engine_version : var.postgres_engine_version
+  engine                          = "aurora-mysql"
+  engine_version                  = var.mysql_engine_version
   database_name                   = "hydra"
   master_username                 = "labadmin"
   manage_master_user_password     = true
   db_subnet_group_name            = aws_db_subnet_group.db[each.key].name
   vpc_security_group_ids          = [aws_security_group.db[each.key].id]
-  db_cluster_parameter_group_name = each.key == "source" ? aws_rds_cluster_parameter_group.mysql.name : aws_rds_cluster_parameter_group.postgres.name
+  db_cluster_parameter_group_name = aws_rds_cluster_parameter_group.mysql.name
   storage_encrypted               = true
   backup_retention_period         = 3
   deletion_protection             = var.deletion_protection
@@ -152,7 +153,7 @@ resource "aws_rds_cluster" "db" {
   final_snapshot_identifier       = "${var.name}-${each.key}-final"
 }
 resource "aws_rds_cluster_instance" "writer" {
-  for_each            = local.networks
+  for_each            = { source = local.networks.source }
   identifier          = "${var.name}-${each.key}-writer"
   cluster_identifier  = aws_rds_cluster.db[each.key].id
   instance_class      = var.db_instance_class
@@ -162,7 +163,7 @@ resource "aws_rds_cluster_instance" "writer" {
   availability_zone   = data.aws_availability_zones.available.names[0]
 }
 resource "aws_rds_cluster_instance" "reader" {
-  for_each            = var.add_readers ? local.networks : {}
+  for_each            = var.add_readers ? { source = local.networks.source } : {}
   identifier          = "${var.name}-${each.key}-reader"
   cluster_identifier  = aws_rds_cluster.db[each.key].id
   instance_class      = var.db_instance_class
@@ -170,6 +171,32 @@ resource "aws_rds_cluster_instance" "reader" {
   engine_version      = aws_rds_cluster.db[each.key].engine_version
   publicly_accessible = false
   availability_zone   = data.aws_availability_zones.available.names[1]
+}
+# Fresh engineering namespaces only. Do not apply this target replacement to an
+# older Aurora target state without a separate reviewed migration/retention plan.
+resource "aws_db_instance" "target" {
+  identifier                  = "${var.name}-target"
+  engine                      = "postgres"
+  engine_version              = var.postgres_engine_version
+  instance_class              = var.db_instance_class
+  db_name                     = "hydra"
+  username                    = "labadmin"
+  manage_master_user_password = true
+  db_subnet_group_name        = aws_db_subnet_group.db["target"].name
+  vpc_security_group_ids      = [aws_security_group.db["target"].id]
+  parameter_group_name        = aws_db_parameter_group.postgres.name
+  allocated_storage           = 100
+  max_allocated_storage       = 200
+  storage_type                = "gp3"
+  storage_encrypted           = true
+  multi_az                    = false
+  publicly_accessible         = false
+  auto_minor_version_upgrade  = false
+  backup_retention_period     = 3
+  deletion_protection         = var.deletion_protection
+  skip_final_snapshot         = false
+  final_snapshot_identifier   = "${var.name}-target-final"
+  delete_automated_backups    = false
 }
 resource "aws_iam_role" "dms_service" {
   for_each           = var.create_dms_service_roles ? toset(["dms-vpc-role", "dms-cloudwatch-logs-role"]) : toset([])
@@ -240,7 +267,7 @@ resource "aws_iam_role_policy_attachment" "runner_ssm" {
 resource "aws_iam_role_policy" "runner_secrets" {
   role = aws_iam_role.runner.id
   policy = jsonencode({ Version = "2012-10-17", Statement = [
-    { Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = [for c in aws_rds_cluster.db : c.master_user_secret[0].secret_arn] },
+    { Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = concat([for c in aws_rds_cluster.db : c.master_user_secret[0].secret_arn], [aws_db_instance.target.master_user_secret[0].secret_arn]) },
     { Effect = "Allow", Action = ["secretsmanager:PutSecretValue"], Resource = [for s in aws_secretsmanager_secret.dms : s.arn] }
   ] })
 }

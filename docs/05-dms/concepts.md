@@ -6,7 +6,7 @@ The provided task uses `DO_NOTHING` because native Hydra migrations own the appl
 
 Foreign keys are implemented using triggers on PostgreSQL. Loading related tables concurrently can violate them before parent rows arrive. This lab gives the DMS session permission to set `session_replication_role=replica` through its endpoint connection script. Application sessions do not receive that setting. Explicit post-load foreign-key checks are mandatory because bypassed checks are not retroactively enforced automatically.
 
-DMS receives application-table DML grants and permission to create diagnostic objects in `awsdms_control`. It does not own Hydra's schema. The target user setup is a live-validation checkpoint, particularly the Aurora permission to set the replication-role parameter.
+DMS receives application-table DML grants and permission to create diagnostic objects in `awsdms_control`. It does not own Hydra's schema. The target user setup is a live-validation checkpoint, particularly the RDS PostgreSQL permission to set the replication-role parameter.
 
 Strict error handling stops the task for data, truncation, and apply errors. This is intentional for teaching: silently continuing past a missing row would undermine the evidence. Validation is enabled and must be inspected at the table level.
 

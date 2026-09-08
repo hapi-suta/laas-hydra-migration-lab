@@ -150,6 +150,304 @@
       },
       "rule-action": "rename",
       "value": "public"
+    },
+    {
+      "rule-type": "table-settings",
+      "rule-id": "200",
+      "rule-name": "client-full-load-ranges",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_client"
+      },
+      "parallel-load": {
+        "type": "ranges",
+        "columns": [
+          "id"
+        ],
+        "boundaries": [
+          [
+            "lab-restored-000000560000"
+          ],
+          [
+            "lab-restored-000001120000"
+          ],
+          [
+            "lab-restored-000001680000"
+          ]
+        ]
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "300",
+      "rule-name": "uuid-hydra_client-pk",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_client",
+        "column-name": "pk"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "301",
+      "rule-name": "uuid-hydra_client-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_client",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "302",
+      "rule-name": "uuid-hydra_jwk-pk",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_jwk",
+        "column-name": "pk"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "303",
+      "rule-name": "uuid-hydra_jwk-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_jwk",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "304",
+      "rule-name": "uuid-hydra_oauth2_access-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_access",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "305",
+      "rule-name": "uuid-hydra_oauth2_authentication_session-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_authentication_session",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "306",
+      "rule-name": "uuid-hydra_oauth2_code-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_code",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "307",
+      "rule-name": "uuid-hydra_oauth2_flow-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_flow",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "308",
+      "rule-name": "uuid-hydra_oauth2_jti_blacklist-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_jti_blacklist",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "309",
+      "rule-name": "uuid-hydra_oauth2_logout_request-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_logout_request",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "310",
+      "rule-name": "uuid-hydra_oauth2_obfuscated_authentication_session-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_obfuscated_authentication_session",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "311",
+      "rule-name": "uuid-hydra_oauth2_oidc-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_oidc",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "312",
+      "rule-name": "uuid-hydra_oauth2_pkce-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_pkce",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "313",
+      "rule-name": "uuid-hydra_oauth2_refresh-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_refresh",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "314",
+      "rule-name": "uuid-hydra_oauth2_trusted_jwt_bearer_issuer-id",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_trusted_jwt_bearer_issuer",
+        "column-name": "id"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "315",
+      "rule-name": "uuid-hydra_oauth2_trusted_jwt_bearer_issuer-nid",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "hydra_oauth2_trusted_jwt_bearer_issuer",
+        "column-name": "nid"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
+    },
+    {
+      "rule-type": "transformation",
+      "rule-id": "316",
+      "rule-name": "uuid-networks-id",
+      "rule-target": "column",
+      "object-locator": {
+        "schema-name": "hydra",
+        "table-name": "networks",
+        "column-name": "id"
+      },
+      "rule-action": "change-data-type",
+      "data-type": {
+        "type": "string",
+        "length": 36
+      }
     }
   ]
 }

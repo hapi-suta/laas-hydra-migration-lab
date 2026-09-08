@@ -253,6 +253,11 @@ aws ssm start-session --region us-east-1 --target YOUR_RUNNER_INSTANCE_ID \
 Keep the terminal open. Browse to **http://localhost:8080**. Use this exact
 hostname because it is the configured OAuth issuer and callback URL.
 
+If the browser connection resets after an idle period, inspect this terminal.
+Session Manager may report that the forwarding session timed out. Rerun the same
+forwarding command after it exits, then reload the browser. Reconnecting the
+tunnel preserves the portal's existing session; restarting the portal does not.
+
 1. Confirm **Active backend: source**.
 2. Select **Sign in**, choose **Alice**, and continue through consent.
 3. Open **Protected account**. Confirm **Verified by source** and Alice's subject.
@@ -268,4 +273,9 @@ long restore/assessment session can outlast token expiry.
 **Checkpoint:** successful restore log, matching manifest counts/bytes, zero
 orphans, source readiness, Alice/Bob login and refresh. Continue to
 [SCT assessment](../04-sct/build.md). You will create visible CDC changes in
-[Module 05](../05-dms/use.md) after starting your migration task.
+[task 4](../05-dms/use.md) after starting your migration task.
+
+The portal verifies revocation by retrying the revoked refresh token. In the tested
+Hydra v2.2.0 run, Hydra returned HTTP 401 with `token_inactive`. This is an expected
+rejection for that test. A generic authentication failure such as `invalid_client`
+does not pass the revocation check.
