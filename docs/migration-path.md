@@ -1,9 +1,9 @@
 # Migration practice path
 
-This is the path to use when your company has already created the AWS
-environment for you. You do not create VPCs, security groups, EC2, RDS or DMS
-from this page. Your platform team supplies those resources and the connection
-details.
+Use this shorter path only when the AWS environment has already been created
+for you, or when you are repeating the migration after completing the full
+build. It does not replace the main sandbox setup. You do not create VPCs,
+security groups, EC2, RDS or DMS from this page.
 
 The migration you practise is **Aurora MySQL → Amazon RDS for PostgreSQL**.
 SCT reviews the database design. DMS moves the rows and follows new changes.
@@ -11,7 +11,9 @@ The application is switched only after the data checks pass.
 
 ## Before you start
 
-Ask the platform owner for the following values. Keep passwords in the approved
+Before using this path, collect the following values from the person who
+prepared the environment. If this is your first run in your personal sandbox,
+return to [Start the full AWS build](start.md). Keep passwords in the approved
 secret store, never in this worksheet or a screenshot.
 
 | Check | What you need |

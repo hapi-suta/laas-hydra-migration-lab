@@ -8,10 +8,10 @@ Alice will sign in before the move. She needs to keep using her existing login
 after it. Bob will start a new session after the move. Your job is to make
 both work, and show the team the checks that prove it.
 
-The primary path assumes your platform team has already built the AWS
-environment. You practise the migration, validation and application cutover.
-An optional full-build path is available when you need to create the lab from
-an empty account. This is a Comcast training scenario using synthetic data, not
+This is a personal AWS sandbox. You create the AWS environment, restore the
+practice data, run the migration and test the application yourself. A separate
+migration-only path is available later when an environment has already been
+prepared for you. This is a Comcast training scenario using synthetic data, not
 Comcast production data.
 
 ## Start on your Mac
@@ -22,10 +22,9 @@ Your laptop is where you read the guide, manage AWS and later use the app.
 You create a Linux computer in AWS, called the **runner**, to run Hydra and the
 database commands. For SCT, you open a temporary Windows EC2 desktop from your Mac. Aurora MySQL and RDS PostgreSQL also run in AWS.
 
-**Your first step: [Start the migration practice](migration-path.md).** It
-lists the values your platform team must provide and takes you through SCT,
-DMS, CDC, validation and cutover. If you are building the AWS lab yourself,
-start with the [full AWS build path](start.md).
+**Your first step: [Start the full AWS build](start.md).** You will create the
+network, EC2 runner, Aurora MySQL source, RDS PostgreSQL target and DMS support
+resources in your personal sandbox before practising the migration.
 
 ## What you will see
 
@@ -58,11 +57,12 @@ The portal talks to Hydra; Hydra stores its data in the database.
 
 ## Choose your path
 
-The migration path is the recommended customer exercise. The full-build path is
-for a learner who has been asked to create the environment as well.
+The full-build path is the main customer exercise because this is a personal
+sandbox. The migration-only path is useful for repeating SCT, DMS and cutover
+after the environment already exists.
 
-- [Migration practice: use the supplied environment](migration-path.md)
 - [Full AWS build: create the environment yourself](start.md)
+- [Migration practice: use an already-prepared environment](migration-path.md)
 
 ## Full-build tasks
 
