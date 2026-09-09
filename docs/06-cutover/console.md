@@ -69,13 +69,13 @@ SQL write or janitor may continue. Record the start of application downtime. The
 
 **Where:** your browser, AWS Console. Keep the runner session open in another tab.
 
-1. Use the Console search box to open **Database Migration Service** in your lab Region.
-2. Choose **Database migration tasks**, then the task name from your worksheet.
-3. Open **Table statistics**. Look at every selected table, including the empty ones. Require all 14 tables to show completed full load and **Validated**. Pending, failed and suspended record counts must each be **0**.
-4. If records are pending, leave DMS running and wait. Refresh this view. A full-load progress value of 100% does not mean validation has finished.
-5. Open the task's **CloudWatch metrics** tab. Inspect **CDCIncomingChanges**, **CDCLatencySource** and **CDCLatencyTarget**. Use a recent time range that includes the time you stopped source writes. Require several fresh samples with no queued incoming changes. A missing sample is not zero.
-6. Open the task's CloudWatch log link and check for migration errors. Save screenshots of the task name, table results and timestamped metrics to your evidence folder.
-7. Keep DMS running while you perform the database comparisons in step 4.
+- Use the Console search box to open **Database Migration Service** in your lab Region.
+- Choose **Database migration tasks**, then the task name from your worksheet.
+- Open **Table statistics**. Look at every selected table, including the empty ones. Require all 14 tables to show completed full load and **Validated**. Pending, failed and suspended record counts must each be **0**.
+- If records are pending, leave DMS running and wait. Refresh this view. A full-load progress value of 100% does not mean validation has finished.
+- Open the task's **CloudWatch metrics** tab. Inspect **CDCIncomingChanges**, **CDCLatencySource** and **CDCLatencyTarget**. Use a recent time range that includes the time you stopped source writes. Require several fresh samples with no queued incoming changes. A missing sample is not zero.
+- Open the task's CloudWatch log link and check for migration errors. Save screenshots of the task name, table results and timestamped metrics to your evidence folder.
+- Keep DMS running while you perform the database comparisons in step 4.
 
 **Why:** full load copies existing rows; CDC follows later changes; validation compares the rows. All three must finish before you stop the task. [AWS DMS validation](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Validating.html) and [monitoring](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Monitoring.html).
 
@@ -175,11 +175,11 @@ fenced until the evidence is complete. Investigate any mismatch before cutover.
 
 **Where:** AWS Console, after every check in steps 3 and 4 passes.
 
-1. Return to **Database Migration Service → Database migration tasks**.
-2. Select the task named in your worksheet. Choose **Actions → Stop**.
-3. Check the task name in the confirmation and confirm the stop.
-4. Refresh until the status is **Stopped**. Do not continue while it says **Stopping**.
-5. Save the final table statistics and task details. Keep this task stopped during the remaining steps.
+- Return to **Database Migration Service → Database migration tasks**.
+- Select the task named in your worksheet. Choose **Actions → Stop**.
+- Check the task name in the confirmation and confirm the stop.
+- Refresh until the status is **Stopped**. Do not continue while it says **Stopping**.
+- Save the final table statistics and task details. Keep this task stopped during the remaining steps.
 
 **Expected:** the task is stopped and the last saved results show 14 validated tables with no pending, failed or suspended records. The portal is still unavailable. You have not started target Hydra yet.
 
@@ -321,17 +321,17 @@ The gateway uses target and the portal's admin selection reads
 
 ## 9. Prove continuity and record downtime
 
-1. In Alice's **existing** browser session, open Protected account. Require
+- In Alice's **existing** browser session, open Protected account. Require
    **Verified by target**, active status and Alice's original subject.
-2. Select **Refresh existing token**. Require the same subject and target backend.
+- Select **Refresh existing token**. Require the same subject and target backend.
    A new login does not substitute for this retained-refresh test.
-3. In a private window, sign in as Bob and refresh. This proves new target writes.
-4. Select **Revoke token and sign out** for Bob. Returning to Protected account
+- In a private window, sign in as Bob and refresh. This proves new target writes.
+- Select **Revoke token and sign out** for Bob. Returning to Protected account
    must require sign-in again. Require the confirmation **Hydra rejected the revoked refresh token**; the portal checks reuse before discarding its session tokens.
-5. On the runner, save discovery and JWKS again using step 1's curl commands with
+- On the runner, save discovery and JWKS again using step 1's curl commands with
    `after` filenames. Compare `issuer` and the public key IDs/material with before.
    Investigate a changed issuer or missing old signing key before accepting.
-6. Record the first successful target request and elapsed time since fence.
+- Record the first successful target request and elapsed time since fence.
 
 After target writes, MySQL is stale. Returning traffic to it can lose new logins,
 refresh rotations and revocations. Keep a failed target fenced and recover forward

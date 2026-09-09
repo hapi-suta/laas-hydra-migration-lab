@@ -33,11 +33,11 @@ service roles or other learners' instances.
 
 ## 4. Stop and delete migration resources
 
-1. In **DMS → Database migration tasks**, select the lab task → **Actions → Stop**.
+- In **DMS → Database migration tasks**, select the lab task → **Actions → Stop**.
    Wait for Stopped, save final statistics, then choose **Delete** and confirm its
    exact identifier.
-2. In **Endpoints**, delete only the lab's source and target endpoints.
-3. In **Replication instances**, delete only the lab instance and wait until it
+- In **Endpoints**, delete only the lab's source and target endpoints.
+- In **Replication instances**, delete only the lab instance and wait until it
    disappears. Then delete its subnet group and imported certificate if unused.
 
 ## 5. Remove the databases and runner
@@ -48,22 +48,22 @@ instance, its root volume and dedicated key pair before removing the shared
 runner security group, subnet or IAM profile.
 
 
-1. In **RDS → Databases**, select the **source Aurora cluster → Modify**. Clear
+- In **RDS → Databases**, select the **source Aurora cluster → Modify**. Clear
    deletion protection and apply. Separately select the **target PostgreSQL DB
    instance → Modify**, clear deletion protection and apply. Verify both changes.
-2. For the source, delete any added readers first, then the writer and cluster
+- For the source, delete any added readers first, then the writer and cluster
    using the Aurora deletion workflow. Retain a uniquely named final **DB cluster
    snapshot**. Wait for the cluster to disappear and the snapshot to be Available.
-3. For the target, select its **DB instance → Actions → Delete**. Select **Create
+- For the target, select its **DB instance → Actions → Delete**. Select **Create
    final snapshot**, enter a unique name and select **Retain automated backups**.
    Enter the requested deletion confirmation and choose **Delete**. Wait for the
    instance to disappear. In **Snapshots → Manual**, require the target **DB
    snapshot** Available. Record its retention deadline and the automated-backup
    expiry. The target has no Aurora cluster to delete.
-4. In **EC2 → Instances**, select only the runner → **Instance state → Terminate
+- In **EC2 → Instances**, select only the runner → **Instance state → Terminate
    instance**. Check that its root volume and any separately created lab volumes
    are accounted for. Stopping an instance is not teardown.
-5. In **Secrets Manager**, schedule deletion of the two dedicated DMS secrets
+- In **Secrets Manager**, schedule deletion of the two dedicated DMS secrets
    with the recovery window. RDS manages its master-secret lifecycle; inspect
    the result instead of deleting unrelated secrets.
 
@@ -76,18 +76,18 @@ decision; it is not silently included in this sequence.
 
 ## 6. Remove only unused lab network and IAM resources
 
-1. In **VPC → Endpoints**, delete the lab Secrets Manager interface endpoint.
-2. Wait for database/DMS/endpoint network interfaces to disappear. Delete the lab
+- In **VPC → Endpoints**, delete the lab Secrets Manager interface endpoint.
+- Wait for database/DMS/endpoint network interfaces to disappear. Delete the lab
    SG rules/groups once no ENI references them.
-3. Delete the lab peering connection. Remove custom route-table associations,
+- Delete the lab peering connection. Remove custom route-table associations,
    subnets and route tables. Detach and delete the source internet gateway.
-4. Delete the two lab VPCs. Dependency errors identify remaining resources; inspect
+- Delete the two lab VPCs. Dependency errors identify remaining resources; inspect
    them rather than deleting every resource returned by the Console.
-5. In **RDS**, delete the now-unused lab DB subnet groups, source DB cluster parameter
+- In **RDS**, delete the now-unused lab DB subnet groups, source DB cluster parameter
    group and target DB parameter group. Then in **IAM**, delete the lab-specific runner instance profile/role and DMS
    secrets role when unused. Keep shared `dms-vpc-role` and
    `dms-cloudwatch-logs-role` if other migrations use them.
-6. Remove lab-only alarms/log groups according to the evidence retention policy.
+- Remove lab-only alarms/log groups according to the evidence retention policy.
 
 ## 7. Verify the outcome
 

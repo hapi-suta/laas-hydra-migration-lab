@@ -16,12 +16,12 @@ Manager download in step 3.
 
 ### Installer route
 
-1. In Safari or Chrome, open [AWS's CLI installation page](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
-2. Expand **macOS** and follow its graphical installer link to download
+- In Safari or Chrome, open [AWS's CLI installation page](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+- Expand **macOS** and follow its graphical installer link to download
    `AWSCLIV2.pkg`.
-3. Open **Finder → Downloads** and double-click the package. Continue through the
+- Open **Finder → Downloads** and double-click the package. Continue through the
    installer, choose **Install**, and approve it using your Mac's login when asked.
-4. Open a new Terminal: press **Command+Space**, type **Terminal**, then press
+- Open a new Terminal: press **Command+Space**, type **Terminal**, then press
    **Return**. Run the check below.
 
 ```bash
@@ -49,10 +49,10 @@ Press Return after entering it. This is your Mac login, not an AWS password.
 
 ### Installer route
 
-1. Open [AWS's signed macOS plugin instructions](https://docs.aws.amazon.com/systems-manager/latest/userguide/install-plugin-macos-overview.html).
-2. Choose the signed package for **Apple silicon** or **Intel**, matching step 1.
-3. Open the downloaded `.pkg` from Finder and complete the installer.
-4. Open a new Terminal window and run:
+- Open [AWS's signed macOS plugin instructions](https://docs.aws.amazon.com/systems-manager/latest/userguide/install-plugin-macos-overview.html).
+- Choose the signed package for **Apple silicon** or **Intel**, matching step 1.
+- Open the downloaded `.pkg` from Finder and complete the installer.
+- Open a new Terminal window and run:
 
 ```bash
 session-manager-plugin
@@ -101,10 +101,10 @@ which opens the private connections.
 
 ## 4. Install Windows App for the SCT desktop
 
-1. Open the **Mac App Store**. Search for **Windows App** and confirm the publisher
+- Open the **Mac App Store**. Search for **Windows App** and confirm the publisher
    is Microsoft. Install it.
-2. Open Windows App. Finish or skip its introductory tour.
-3. Leave it ready. You have no SCT computer to connect to yet. In task 3 you will
+- Open Windows App. Finish or skip its introductory tour.
+- Leave it ready. You have no SCT computer to connect to yet. In task 3 you will
    create Windows EC2 and add it using **Devices → + → Add PC**.
 
 [Microsoft's Mac connection instructions](https://learn.microsoft.com/en-us/windows-app/get-started-connect-devices-desktops-apps).

@@ -1,10 +1,10 @@
 # Trace and verify the network
 
-1. Explain the full path from DMS to the MySQL writer. Identify both route tables and the matching security-group rule.
-2. Explain how your laptop reaches the portal despite the runner having no inbound security-group rules.
-3. Locate the AWS-managed administrator secrets and the empty DMS endpoint secrets. Explain why they have different consumers.
-4. Identify the Aurora source cluster's writer endpoint and the RDS PostgreSQL target's DB instance endpoint. Explain why a source reader endpoint is unsuitable for CDC.
-5. Estimate a full day of charges using the current AWS pricing calculator, including database instances, DMS, EC2, endpoint hours, storage, I/O, and retained snapshots.
+- Explain the full path from DMS to the MySQL writer. Identify both route tables and the matching security-group rule.
+- Explain how your laptop reaches the portal despite the runner having no inbound security-group rules.
+- Locate the AWS-managed administrator secrets and the empty DMS endpoint secrets. Explain why they have different consumers.
+- Identify the Aurora source cluster's writer endpoint and the RDS PostgreSQL target's DB instance endpoint. Explain why a source reader endpoint is unsuitable for CDC.
+- Estimate a full day of charges using the current AWS pricing calculator, including database instances, DMS, EC2, endpoint hours, storage, I/O, and retained snapshots.
 
 <details markdown="1"><summary>Verification hint</summary>
 

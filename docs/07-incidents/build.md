@@ -134,14 +134,14 @@ PostgreSQL `22P02` and invalid UUID syntax. The corrected mapping transfers the
 17 UUID source columns as DMS `string(36)`. A fresh CDC test passed. Resuming did
 not replay the earlier rejected insert, so the author repeated full load.
 
-1. In **DMS → your task**, save the error, checkpoint and table statistics. If
+- In **DMS → your task**, save the error, checkpoint and table statistics. If
    the task is running, stop it with step 3 above and wait for Stopped. If it is
    already Failed, leave it failed for modification. Do not try to conceal the
    error by changing its handling policy.
-2. Replace your local `table-mappings.json` with the complete reviewed mapping in
+- Replace your local `table-mappings.json` with the complete reviewed mapping in
    [task creation](../05-dms/build.md#7-write-and-review-the-exact-table-mappings).
    Verify your 14 tables, range boundaries and all 17 UUID transformations.
-3. In **CloudShell**, apply the correction:
+- In **CloudShell**, apply the correction:
 
 ```bash
 aws dms modify-replication-task --replication-task-arn "$TASK_ARN" \
@@ -157,7 +157,7 @@ Repeat the describe command until modification finishes and the task is Stopped.
 **Console alternative:** task → Actions → Modify → Table mappings → JSON editor;
 replace the mapping, save, wait for Stopped and reopen it to verify the saved JSON.
 
-4. On the **runner**, `docker compose ps -a` must show target stopped. In the
+- On the **runner**, `docker compose ps -a` must show target stopped. In the
    **target PostgreSQL prompt**, connected as hydra to database hydra, run the
    following only after confirming this is your incomplete training copy:
 
@@ -195,7 +195,7 @@ unexpected dependency must stop the reset. Rerun the target counts from
 [cutover comparisons](../06-cutover/build.md#4-compare-exact-table-counts-while-writes-are-stopped)
 and require all 14 data tables empty. Keep target Hydra stopped.
 
-5. In **CloudShell**, restart the full load:
+- In **CloudShell**, restart the full load:
 
 ```bash
 aws dms start-replication-task --replication-task-arn "$TASK_ARN" \
@@ -207,7 +207,7 @@ reloads existing data, and confirm the action. This is safe here because you
 explicitly emptied your incomplete target copy. DO_NOTHING preserves the native
 schema and does not empty it for you.
 
-6. Repeat full-load monitoring, the visible CDC exercise, final validation and
+- Repeat full-load monitoring, the visible CDC exercise, final validation and
    cutover. If the previous test client still exists on MySQL, let full load copy
    it and use a new unique test ID in every command of the fresh CDC exercise.
    Do not insert a duplicate client or edit target rows to make validation pass.

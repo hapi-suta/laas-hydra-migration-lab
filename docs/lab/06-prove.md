@@ -12,12 +12,12 @@ Keep the AWS Console open at **DMS → Database migration tasks**. The migration
 
 ## Test the application
 
-1. In Alice's original browser session, open **Protected account**. Require **Verified by target**, active status and Alice's original subject.
-2. Select **Refresh existing token**. Require success on target without signing in again.
-3. Open a private window and sign in as Bob. Approve consent and open Protected account.
-4. Refresh Bob's token. Then select **Revoke token and sign out**. Protected account must require sign-in again. Require **Hydra rejected the revoked refresh token** on the sign-out confirmation.
-5. Compare the discovery issuer and public JWKS saved before and after cutover. The issuer and existing signing key must remain available.
-6. Record the outage from the time you stopped the gateway to the first successful target request. Include time spent waiting for checks; do not report only the container start time.
+- In Alice's original browser session, open **Protected account**. Require **Verified by target**, active status and Alice's original subject.
+- Select **Refresh existing token**. Require success on target without signing in again.
+- Open a private window and sign in as Bob. Approve consent and open Protected account.
+- Refresh Bob's token. Then select **Revoke token and sign out**. Protected account must require sign-in again. Require **Hydra rejected the revoked refresh token** on the sign-out confirmation.
+- Compare the discovery issuer and public JWKS saved before and after cutover. The issuer and existing signing key must remain available.
+- Record the outage from the time you stopped the gateway to the first successful target request. Include time spent waiting for checks; do not report only the container start time.
 
 If a check fails, keep the evidence and diagnose it before marking the lab complete. See [cutover recovery](../06-cutover/survive.md) for the recovery boundary and [incident exercises](../07-incidents/build.md) for additional practice.
 

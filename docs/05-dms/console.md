@@ -123,9 +123,9 @@ dms_apply, setting session_replication_role to replica, and resetting it to orig
 Choose and privately retain separate source and target DMS passwords. Verify
 the grants and binlog queries before continuing. Then create the secrets:
 
-1. Open **Secrets Manager → Store a new secret**.
-2. Select **Other type of secret** and the **Key/value pairs** editor.
-3. Enter exactly these four keys for the source:
+- Open **Secrets Manager → Store a new secret**.
+- Select **Other type of secret** and the **Key/value pairs** editor.
+- Enter exactly these four keys for the source:
 
 | Key | Value |
 |---|---|
@@ -134,33 +134,33 @@ the grants and binlog queries before continuing. Then create the secrets:
 | host | Your native source cluster writer endpoint |
 | port | 3306 |
 
-4. Select the default **aws/secretsmanager** encryption key → **Next**.
-5. Name the secret `your-prefix/dms-source`. Add your Project tag → **Next**.
-6. Leave automatic rotation off for this bounded lab → **Next → Store**.
-7. Repeat to create `your-prefix/dms-target` with `dms_apply`, its own password,
+- Select the default **aws/secretsmanager** encryption key → **Next**.
+- Name the secret `your-prefix/dms-source`. Add your Project tag → **Next**.
+- Leave automatic rotation off for this bounded lab → **Next → Store**.
+- Repeat to create `your-prefix/dms-target` with `dms_apply`, its own password,
    the target DB instance endpoint and port `5432`.
-8. Open each secret and copy its **complete ARN** to your worksheet. Do not select
+- Open each secret and copy its **complete ARN** to your worksheet. Do not select
    the RDS-managed master secret as a DMS endpoint credential.
 
 Create the role that DMS assumes to read these secrets:
 
-1. Open **IAM → Roles → Create role → Custom trust policy**.
-2. Paste this policy for us-east-1, then continue and name the role
+- Open **IAM → Roles → Create role → Custom trust policy**.
+- Paste this policy for us-east-1, then continue and name the role
    `your-prefix-dms-secrets`:
 
 ```json
 {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"dms.us-east-1.amazonaws.com"},"Action":"sts:AssumeRole"}]}
 ```
 
-3. On the new role open **Permissions → Add permissions → Create inline policy**.
-4. Select **JSON** and paste this complete policy, replacing both ARN placeholders:
+- On the new role open **Permissions → Add permissions → Create inline policy**.
+- Select **JSON** and paste this complete policy, replacing both ARN placeholders:
 
 ```json
 {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["secretsmanager:GetSecretValue","secretsmanager:DescribeSecret"],"Resource":["YOUR_SOURCE_DMS_SECRET_ARN","YOUR_TARGET_DMS_SECRET_ARN"]}]}
 ```
 
-5. Name it `ReadLabEndpoints`, create it, and record the role ARN.
-6. Confirm the Resource array names only your two endpoint secrets. Your Console
+- Name it `ReadLabEndpoints`, create it, and record the role ARN.
+- Confirm the Resource array names only your two endpoint secrets. Your Console
    identity needs permission to pass this role to DMS.
 
 **Expected:** two populated secrets and a scoped read role, with SQL users already
@@ -168,13 +168,13 @@ created. [AWS's Console secret/role procedure](https://docs.aws.amazon.com/dms/l
 
 ## 2. Import the database CA
 
-1. Download the region's CA bundle from the
+- Download the region's CA bundle from the
    [RDS trust store](https://truststore.pki.rds.amazonaws.com/us-east-1/us-east-1-bundle.pem)
    for this us-east-1 lab. The CLI endpoint helper downloads the same regional
    bundle; application clients may use the global bundle.
-2. Open **DMS → Certificates → Import certificate**. Name it with your lab prefix
+- Open **DMS → Certificates → Import certificate**. Name it with your lab prefix
    and select the regional PEM file. Save the certificate identifier.
-3. If using a different region, select its official regional bundle. Do not import
+- If using a different region, select its official regional bundle. Do not import
    an arbitrary certificate from a blog or disable validation to get a green test.
 
 ## 3. Create the source endpoint
@@ -218,15 +218,15 @@ creating duplicates. Resolve permission, network and TLS failures explicitly.
 
 ## 5. Create the task without starting it
 
-1. Open **DMS → Database migration tasks → Create task**.
-2. Enter your lab's task identifier, replication instance, source endpoint and
+- Open **DMS → Database migration tasks → Create task**.
+- Enter your lab's task identifier, replication instance, source endpoint and
    target endpoint. Choose **Migrate existing data and replicate ongoing changes**.
-3. Select the JSON editor for **Task settings** and paste the complete
+- Select the JSON editor for **Task settings** and paste the complete
    **Task settings JSON** printed below. Review the saved settings:
    `DO_NOTHING`, full load + CDC, all source-DDL flags false, limited LOB mode
    with a 64 KiB limit, validation enabled, dedicated control schema, and strict
    error handling.
-4. Under **Table mappings → JSON editor**, paste the complete reviewed
+- Under **Table mappings → JSON editor**, paste the complete reviewed
    **Table mappings JSON** printed below. It selects exact tables including `networks`
    and maps MySQL `hydra` to PostgreSQL `public`. Do not replace it with a
    `hydra_%` wildcard or copy source migration bookkeeping. The table-settings rule loads
@@ -235,7 +235,7 @@ creating duplicates. Resolve permission, network and TLS failures explicitly.
    Also retain all 17 UUID column transformations to `string(36)`. Compare them
    against the target catalog query below. These rules are required
    for CDC into Hydra's native PostgreSQL UUID columns.
-5. For startup behavior, choose **Manually later**. Create the task and wait for
+- For startup behavior, choose **Manually later**. Create the task and wait for
    **Ready**. Reopen its settings and verify the endpoint pair and both JSON
    configurations. Capture configuration evidence without secret values.
 
@@ -834,17 +834,17 @@ Follow the [exact disposable-lab recovery steps](../07-incidents/build.md#6-reco
 
 ## 6. Start, monitor and inspect validation
 
-1. Reconfirm the empty-target gate and that target Hydra is stopped.
-2. Select the task → **Actions → Restart/Resume** (or **Start**, when offered).
+- Reconfirm the empty-target gate and that target Hydra is stopped.
+- Select the task → **Actions → Restart/Resume** (or **Start**, when offered).
    For its first run, choose the option to start the initial full load and CDC.
-3. Open **Table statistics**. Require all selected tables to finish full load;
+- Open **Table statistics**. Require all selected tables to finish full load;
    investigate any error/suspended table. Inspect **Validation state**, pending,
    failed and suspended records. A running task alone does not prove validation.
-4. Open the task's **Monitoring** tab and its **CloudWatch logs** link. In
+- Open the task's **Monitoring** tab and its **CloudWatch logs** link. In
    **CloudWatch → Metrics → DMS**, graph `CDCLatencySource`, `CDCLatencyTarget`,
    `CDCIncomingChanges`, task throughput and replication-instance CPU/memory/
    swap/free storage. Select the dimensions belonging to this task/instance.
-5. Perform the [manual CDC exercise](use.md). Confirm insert/update/delete counters
+- Perform the [manual CDC exercise](use.md). Confirm insert/update/delete counters
    advance on the affected tables; retain the successful workload evidence.
 
 ## 7. Add an alarm and practice recovery

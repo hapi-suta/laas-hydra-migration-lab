@@ -332,17 +332,17 @@ The gateway uses target and the portal's admin selection reads
 
 ## 9. Prove continuity and record downtime
 
-1. In Alice's **existing** browser session, open Protected account. Require
+- In Alice's **existing** browser session, open Protected account. Require
    **Verified by target**, active status and Alice's original subject.
-2. Select **Refresh existing token**. Require the same subject and target backend.
+- Select **Refresh existing token**. Require the same subject and target backend.
    A new login does not substitute for this retained-refresh test.
-3. In a private window, sign in as Bob and refresh. This proves new target writes.
-4. Select **Revoke token and sign out** for Bob. Returning to Protected account
+- In a private window, sign in as Bob and refresh. This proves new target writes.
+- Select **Revoke token and sign out** for Bob. Returning to Protected account
    must require sign-in again. Require the confirmation **Hydra rejected the revoked refresh token**; the portal checks reuse before discarding its session tokens.
-5. On the runner, save discovery and JWKS again using step 1's curl commands with
+- On the runner, save discovery and JWKS again using step 1's curl commands with
    `after` filenames. Compare `issuer` and the public key IDs/material with before.
    Investigate a changed issuer or missing old signing key before accepting.
-6. Record the first successful target request and elapsed time since fence.
+- Record the first successful target request and elapsed time since fence.
 
 After target writes, MySQL is stale. Returning traffic to it can lose new logins,
 refresh rotations and revocations. Keep a failed target fenced and recover forward

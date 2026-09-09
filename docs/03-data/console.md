@@ -6,23 +6,23 @@ SQL users and target schema must be your own work. The source database is empty.
 
 ## 1. Check your restore destination
 
-1. Open **RDS → Databases → your source cluster**.
-2. Confirm engine **Aurora MySQL**, status **Available** and your lab prefix.
-3. Under **Connectivity & security**, copy the cluster writer endpoint, port 3306,
+- Open **RDS → Databases → your source cluster**.
+- Confirm engine **Aurora MySQL**, status **Available** and your lab prefix.
+- Under **Connectivity & security**, copy the cluster writer endpoint, port 3306,
    source VPC and source DB security group into your worksheet.
-4. Open the writer instance. Confirm **Publicly accessible: No**.
-5. Check the parameter group has ROW binlogs and FULL row images. The SQL checks
+- Open the writer instance. Confirm **Publicly accessible: No**.
+- Check the parameter group has ROW binlogs and FULL row images. The SQL checks
    in the next step prove these values are active.
 
 ## 2. Open your runner and perform the logical restore
 
-1. Open **EC2 → Instances → your runner → Connect → Session Manager → Connect**.
-2. Run `sudo su - ec2-user`, then `cd /opt/hydra-practice`.
-3. Follow [Restore MySQL, steps 1-4](build.md). Download the fixture yourself,
+- Open **EC2 → Instances → your runner → Connect → Session Manager → Connect**.
+- Run `sudo su - ec2-user`, then `cd /opt/hydra-practice`.
+- Follow [Restore MySQL, steps 1-4](build.md). Download the fixture yourself,
    check its checksum, create your private client file, prove the database is
    empty, run the import, then verify counts and bytes.
-4. Keep the tmux session running while monitoring **RDS → source writer → Monitoring**.
-5. Save your restore exit status and SQL results before starting Hydra.
+- Keep the tmux session running while monitoring **RDS → source writer → Monitoring**.
+- Save your restore exit status and SQL results before starting Hydra.
 
 The RDS Console does not upload a logical `.sql.gz` file into Aurora MySQL.
 **Restore from S3** is a different physical-backup workflow and does not accept

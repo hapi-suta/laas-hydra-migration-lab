@@ -12,12 +12,12 @@ assessment and compares it with Hydra's native PostgreSQL schema.
 
 ## 1. Install SCT and the JDBC drivers yourself
 
-1. Open the [AWS SCT installation procedure](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.Procedure.html).
-2. In Edge inside your Windows EC2 desktop, download the Windows ZIP. In File
+- Open the [AWS SCT installation procedure](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.Procedure.html).
+- In Edge inside your Windows EC2 desktop, download the Windows ZIP. In File
    Explorer, open Downloads, right-click the ZIP and choose **Extract All**. Open
    the extracted folder and locate its MSI. These actions happen on Windows;
    your Mac displays that desktop.
-3. Follow [AWS package verification](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.InstallValidation.html).
+- Follow [AWS package verification](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Installing.InstallValidation.html).
    Right-click the MSI → **Properties → Digital Signatures**. Select the Amazon
    Web Services signer and open **Details**; require that the signature is OK.
    Then launch the MSI, read the license and complete the installer. Open SCT
@@ -25,10 +25,10 @@ assessment and compares it with Hydra's native PostgreSQL schema.
    open more copies while it starts. If it offers **Get started with DMS SC**,
    choose **Not now** to continue with this SCT desktop exercise. Record the
    build from **Help → About**.
-4. Download the [MySQL Connector/J JAR](https://repo.maven.apache.org/maven2/com/mysql/mysql-connector-j/26.7.0/mysql-connector-j-26.7.0.jar) and [PostgreSQL JDBC JAR](https://jdbc.postgresql.org/download/postgresql-42.7.13.jar) to a folder inside Windows. Keep the `.jar` files; SCT opens them directly.
-5. In **SCT → Settings → Global settings → Drivers**, choose the MySQL and
+- Download the [MySQL Connector/J JAR](https://repo.maven.apache.org/maven2/com/mysql/mysql-connector-j/26.7.0/mysql-connector-j-26.7.0.jar) and [PostgreSQL JDBC JAR](https://jdbc.postgresql.org/download/postgresql-42.7.13.jar) to a folder inside Windows. Keep the `.jar` files; SCT opens them directly.
+- In **SCT → Settings → Global settings → Drivers**, choose the MySQL and
    PostgreSQL driver files, then save. Record both driver versions.
-6. In RDS, record your source cluster writer endpoint and target DB instance endpoint. The comparison target
+- In RDS, record your source cluster writer endpoint and target DB instance endpoint. The comparison target
    database is **sct_compare**, which you created in task 2.
 
 ## 2. Create your trust store and private connections
@@ -124,61 +124,61 @@ database tunnel or hosts-file edits for this EC2 route.
 
 ## 3. Create the project and source connection
 
-1. In SCT choose **File → New project**, name it with the lab prefix, and save it
+- In SCT choose **File → New project**, name it with the lab prefix, and save it
    in your private working directory.
-2. Choose **Add source → MySQL → Next**.
-3. Enter a connection name such as `HYDRA_MYSQL`. For the Windows EC2 route,
+- Choose **Add source → MySQL → Next**.
+- Enter a connection name such as `HYDRA_MYSQL`. For the Windows EC2 route,
    use your native source writer hostname and port **3306**.
-4. Enter the dedicated `sct_reader` credential you created in task 2.
+- Enter the dedicated `sct_reader` credential you created in task 2.
    It has SELECT and SHOW VIEW access for this isolated lab. Do not use the DMS
    replication user as a substitute for SCT's required privileges.
-5. Select **Use SSL**. On the SSL tab select **Require SSL** and **Verify server
+- Select **Use SSL**. On the SSL tab select **Require SSL** and **Verify server
    certificate**, and select the trust store you created in step 2 containing the
    applicable RDS CA certificates. Leave password storage disabled unless your
    organization's workstation policy explicitly allows SCT's vault.
-6. Choose **Test Connection**; require success, then **Connect**.
+- Choose **Test Connection**; require success, then **Connect**.
 [AWS's MySQL SCT connection fields](https://docs.aws.amazon.com/SchemaConversionTool/latest/userguide/CHAP_Source.MySQL.html).
 
 ## 4. Add the comparison target and mapping
 
-1. Choose **Add target → Amazon RDS for PostgreSQL**.
+- Choose **Add target → Amazon RDS for PostgreSQL**.
    [AWS SCT RDS PostgreSQL walkthrough](https://docs.aws.amazon.com/dms/latest/userguide/CHAP_GettingStarted.SCT.html).
-2. Enter a distinct connection name such as `SCT_COMPARE`, your native target DB
+- Enter a distinct connection name such as `SCT_COMPARE`, your native target DB
    instance hostname, port **5432** for Windows EC2, and database **sct_compare**.
-3. Use the lab's schema-owner credentials and the JDBC driver's verified TLS
+- Use the lab's schema-owner credentials and the JDBC driver's verified TLS
    settings/trust store. This role must be able to create objects in sct_compare.
-4. Test the connection and connect. Inspect the target tree to ensure it is the
+- Test the connection and connect. Inspect the target tree to ensure it is the
    comparison database.
-5. In the source tree, select only the `hydra` database/schema. Add a mapping to
+- In the source tree, select only the `hydra` database/schema. Add a mapping to
    the comparison target. Exclude unrelated MySQL system schemas from conversion.
 
 ## 5. Generate and inspect the assessment
 
-1. Select the source `hydra` node and choose **Create report** from its context
+- Select the source `hydra` node and choose **Create report** from its context
    menu. Open the **Assessment report** view.
-2. Inspect the summary and **Action items**. For every item, record its object,
+- Inspect the summary and **Action items**. For every item, record its object,
    severity, explanation and proposed resolution. A high automatic-conversion
    percentage does not prove Hydra compatibility.
-3. Save/export the report as PDF and CSV to private evidence. Record the SCT
+- Save/export the report as PDF and CSV to private evidence. Record the SCT
    build, driver versions, engine versions, source selection and generation time.
 
 ## 6. Convert and compare
 
-1. Select the source `hydra` node → **Convert schema**. Inspect converted objects
+- Select the source `hydra` node → **Convert schema**. Inspect converted objects
    in the target tree, including inline comments/action items.
-2. Use **Save as SQL** on the converted target objects. Review the SQL before
+- Use **Save as SQL** on the converted target objects. Review the SQL before
    **Apply to database**. Confirm the connection is **sct_compare** and that no
    selected operation targets the application's `hydra` database.
-3. Complete the [tested export repairs](schema-checks.md#apply-the-corrections-found-in-the-rds-rehearsal)
+- Complete the [tested export repairs](schema-checks.md#apply-the-corrections-found-in-the-rds-rehearsal)
    before applying. If you edited the exported SQL, use the linked psql procedure
    to apply that exact reviewed file. The GUI target tree does not automatically
    inherit edits made to an exported file. Inspect the resulting objects and
    retain failed action items rather than suppressing them.
-4. Compare the result to the native `hydra.public` schema using the runner's
+- Compare the result to the native `hydra.public` schema using the runner's
    inventory and SQL catalog checks. Specifically inspect UUIDs versus strings,
    booleans versus integers, JSONB, timestamp precision, keys/indexes, defaults,
    network IDs and migration bookkeeping.
-5. Complete the discrepancy worksheet: object, source, SCT result, native Hydra
+- Complete the discrepancy worksheet: object, source, SCT result, native Hydra
    target, chosen decision, reason, and verification. Resolve every migration-
    relevant discrepancy before approving DMS mappings.
 

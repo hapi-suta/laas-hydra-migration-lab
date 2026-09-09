@@ -19,14 +19,14 @@ You create one network for the source and one for the target, then connect them.
 
 ## 1. Verify the account and create VPCs
 
-1. In the top-right account menu, compare the **Account ID** with your assignment.
+- In the top-right account menu, compare the **Account ID** with your assignment.
    In the region selector, choose **US East (N. Virginia)**.
-2. Use the Console search box to open **VPC**. Select **Your VPCs** and inspect the existing IPv4 CIDRs. The proposed `10.81.0.0/16` and `10.82.0.0/16` ranges must not overlap other networks that will be connected. If they do, agree on unused ranges with the lab administrator before continuing. Choose **Create VPC → VPC only**.
-3. Create `hydra-console-source` with IPv4 CIDR `10.81.0.0/16`, no IPv6 block,
+- Use the Console search box to open **VPC**. Select **Your VPCs** and inspect the existing IPv4 CIDRs. The proposed `10.81.0.0/16` and `10.82.0.0/16` ranges must not overlap other networks that will be connected. If they do, agree on unused ranges with the lab administrator before continuing. Choose **Create VPC → VPC only**.
+- Create `hydra-console-source` with IPv4 CIDR `10.81.0.0/16`, no IPv6 block,
    default tenancy. Select it, choose **Actions → Edit VPC settings**, and enable
    DNS resolution and DNS hostnames.
-4. Repeat for `hydra-console-target`, CIDR `10.82.0.0/16`, with both DNS settings.
-5. Open **Subnets → Create subnet**. Create the following subnets; select two
+- Repeat for `hydra-console-target`, CIDR `10.82.0.0/16`, with both DNS settings.
+- Open **Subnets → Create subnet**. Create the following subnets; select two
    available AZs in your account and use the same AZ pair for both VPCs.
 
 | VPC | Name | CIDR | AZ |
@@ -46,18 +46,18 @@ For each subnet, choose the VPC first, enter the name, select its Availability Z
 
 ## 2. Connect the networks
 
-1. Open **Peering connections → Create peering connection**. Select the source VPC
+- Open **Peering connections → Create peering connection**. Select the source VPC
    as requester, **My account**, **This region**, and the target VPC as accepter.
-2. Select the pending connection and **Actions → Accept request**. Require
+- Select the pending connection and **Actions → Accept request**. Require
    **Active**. Edit its DNS settings to enable resolution for both directions.
-3. Open **Route tables → Create route table**. Create `source-private` in the
+- Open **Route tables → Create route table**. Create `source-private` in the
    source VPC and `target-private` in the target VPC.
-4. Under **Subnet associations → Edit subnet associations**, associate the source
+- Under **Subnet associations → Edit subnet associations**, associate the source
    DB subnets with source-private and the target DB subnets with target-private.
-5. Under **Routes → Edit routes**, add `10.82.0.0/16 → Peering connection` on
+- Under **Routes → Edit routes**, add `10.82.0.0/16 → Peering connection` on
    source-private and `10.81.0.0/16 → Peering connection` on target-private. Keep
    each VPC's automatically created local route.
-6. Open **Internet gateways → Create internet gateway**. Attach the new gateway
+- Open **Internet gateways → Create internet gateway**. Attach the new gateway
    to the source VPC only. Create a third route table, `runner-egress`, in source.
    Associate only runner-public. Add `0.0.0.0/0 → Internet gateway` and
    `10.82.0.0/16 → Peering connection`.
@@ -93,14 +93,14 @@ do not substitute `0.0.0.0/0`. Same-region peering must be active first.
 
 ## 4. Create database subnet and parameter groups
 
-1. Open **RDS → Subnet groups → Create DB subnet group**. Create a source group
+- Open **RDS → Subnet groups → Create DB subnet group**. Create a source group
    named `your-prefix-source` with source-db-a/source-db-b, and a target group
    named `your-prefix-target` with target-db-a/target-db-b.
-2. Open **Parameter groups → Create parameter group**. Select family
+- Open **Parameter groups → Create parameter group**. Select family
    `aurora-mysql8.0`, type **DB cluster parameter group**, name `hydra-console-mysql`.
-3. Edit its parameters: `binlog_format=ROW`, `binlog_row_image=FULL`,
+- Edit its parameters: `binlog_format=ROW`, `binlog_row_image=FULL`,
    `require_secure_transport=ON` (or `1` where the field uses numeric values).
-4. Create a target **DB parameter group**, family `postgres17`,
+- Create a target **DB parameter group**, family `postgres17`,
    name `hydra-console-pg`, with `rds.force_ssl=1`.
 
 In each subnet-group form, select the correct VPC, select both Availability Zones, add the two database subnets, then choose **Create**. Do not put runner-public in a database subnet group.
@@ -152,18 +152,18 @@ if a version or class is missing. The author RDS rehearsal used PostgreSQL 17.11
 on db.r6g.large; availability can differ in your account.
 Create each database and wait for **Available**.
 
-1. Select the **source Aurora cluster**. Copy its **writer endpoint** as SOURCE_HOST.
+- Select the **source Aurora cluster**. Copy its **writer endpoint** as SOURCE_HOST.
    Expand the cluster and record its writer DB instance identifier as SOURCE_WRITER_ID.
-2. Select the **target PostgreSQL DB instance**. Under **Connectivity & security**,
+- Select the **target PostgreSQL DB instance**. Under **Connectivity & security**,
    copy its **Endpoint** as TARGET_HOST and port `5432`. Record the DB instance
    identifier as TARGET_DB_ID. Confirm engine PostgreSQL, Publicly accessible No,
    storage encryption enabled and the intended Single-AZ deployment.
-3. Under **Configuration**, verify the target DB parameter group is `hydra-console-pg`
+- Under **Configuration**, verify the target DB parameter group is `hydra-console-pg`
    and in-sync. If pending-reboot, use **Actions → Reboot**, wait for Available and
    check again before continuing. Open **Parameter groups → your target group**
    and confirm `rds.force_ssl=1`. Later SQL checks must prove TLS is in use;
    `SHOW rds.force_ssl` is not supported by PostgreSQL SQL.
-4. Record both managed master-secret ARNs in your private worksheet. RDS target
+- Record both managed master-secret ARNs in your private worksheet. RDS target
    storage is allocated explicitly; monitor **Monitoring → FreeStorageSpace**
    during loading. 100 GiB is a starting size, not a measured capacity guarantee.
 
@@ -176,11 +176,11 @@ Create each database and wait for **Available**.
 
 ## 6. Record the administrator secrets
 
-1. Select the source cluster in **RDS → Databases → Configuration**.
-2. Follow its **Master credentials ARN** into Secrets Manager. Record the secret
+- Select the source cluster in **RDS → Databases → Configuration**.
+- Follow its **Master credentials ARN** into Secrets Manager. Record the secret
    ARN, not its password, in your worksheet.
-3. Repeat for the target DB instance. They are separate managed secrets.
-4. Do not create DMS credentials yet: you create the SQL users and matching
+- Repeat for the target DB instance. They are separate managed secrets.
+- Do not create DMS credentials yet: you create the SQL users and matching
    dedicated endpoint secrets explicitly in [task 4](../05-dms/console.md).
 
 [AWS Aurora managed credentials](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/rds-secrets-manager.html)
@@ -190,28 +190,28 @@ and [RDS DB instance managed credentials](https://docs.aws.amazon.com/AmazonRDS/
 
 ## 7. Create DMS roles, private service access and replication instance
 
-1. In **IAM → Roles**, search for `dms-vpc-role` and `dms-cloudwatch-logs-role`.
+- In **IAM → Roles**, search for `dms-vpc-role` and `dms-cloudwatch-logs-role`.
    Reuse them only if their trust and policies match below. Create missing roles
    before the replication instance.
-2. For each missing role choose **Create role → Custom trust policy** and enter:
+- For each missing role choose **Create role → Custom trust policy** and enter:
 
 ```json
 {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"dms.amazonaws.com"},"Action":"sts:AssumeRole"}]}
 ```
 
-3. For `dms-vpc-role`, attach the AWS-managed `AmazonDMSVPCManagementRole` policy.
+- For `dms-vpc-role`, attach the AWS-managed `AmazonDMSVPCManagementRole` policy.
    For `dms-cloudwatch-logs-role`, attach `AmazonDMSCloudWatchLogsRole`. Use these
    exact role names. Do not replace another lab's existing role or policy.
-4. In **VPC → Endpoints → Create endpoint**, choose **AWS services**, service
+- In **VPC → Endpoints → Create endpoint**, choose **AWS services**, service
    `com.amazonaws.us-east-1.secretsmanager`, type **Interface**, target VPC,
    target-db-a/target-db-b, private DNS enabled and secrets-endpoint SG.
-5. In **DMS → Subnet groups → Create subnet group**, choose target VPC and its
+- In **DMS → Subnet groups → Create subnet group**, choose target VPC and its
    two DB subnets. Name it with your prefix plus `-dms`.
-6. In **DMS → Replication instances → Create replication instance**, select your
+- In **DMS → Replication instances → Create replication instance**, select your
    prefix, `dms.t3.medium`, engine `3.6.1` if still available, 100 GiB storage,
    Single-AZ, target VPC, your DMS subnet group and dms SG. Clear **Publicly
    accessible**. Disable automatic minor upgrades during this pinned rehearsal.
-7. Wait for **Available** and record the replication-instance ARN. Check the
+- Wait for **Available** and record the replication-instance ARN. Check the
    Secrets Manager VPC endpoint is **Available** too.
 
 [AWS DMS service roles](https://docs.aws.amazon.com/dms/latest/userguide/security-iam.html)
@@ -221,18 +221,18 @@ and [replication instance setup](https://docs.aws.amazon.com/dms/latest/userguid
 
 ## 8. Create the runner role and EC2 instance
 
-1. In **IAM → Roles → Create role**, choose **AWS service → EC2** and attach
+- In **IAM → Roles → Create role**, choose **AWS service → EC2** and attach
    `AmazonSSMManagedInstanceCore`. Name it `hydra-console-runner`.
-2. The runner needs only `AmazonSSMManagedInstanceCore` for this manual path.
+- The runner needs only `AmazonSSMManagedInstanceCore` for this manual path.
    You retrieve credentials using your own Console identity and create SQL users
    interactively; no bootstrap program needs master-secret access.
-3. In **EC2 → Instances → Launch instances**, choose Amazon Linux 2023 x86_64,
+- In **EC2 → Instances → Launch instances**, choose Amazon Linux 2023 x86_64,
    t3.large, source VPC, runner-public subnet, public IP enabled, existing runner
    SG, and no SSH key pair. Select 60 GiB encrypted gp3 root storage.
-4. Expand **Advanced details**. Select the runner IAM instance profile, require
+- Expand **Advanced details**. Select the runner IAM instance profile, require
    IMDSv2, and leave **User data** empty. You will install every package yourself.
    Launch and wait for instance/status checks to pass.
-5. Select the instance, choose **Connect → Session Manager → Connect**. If unavailable,
+- Select the instance, choose **Connect → Session Manager → Connect**. If unavailable,
    check IAM profile, outbound route, public IP, SSM agent and its logs.
 
 **Expected:** the instance reaches **Running**, its status checks pass, and **Connect → Session Manager** opens a shell. A prompt with a cursor means you are connected; it does not mean the app is installed.

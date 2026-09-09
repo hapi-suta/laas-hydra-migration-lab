@@ -1,7 +1,7 @@
 # Plan the migration before creating resources
 
 This orientation creates no resources. Your complete AWS build begins in Module
-02. You do not need a local prebuilt lab or an instructor's deployment.
+- You do not need a local prebuilt lab or an instructor's deployment.
 
 ## 1. Draw the two data paths
 

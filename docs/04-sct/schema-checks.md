@@ -157,21 +157,21 @@ Keep the original export. Open a copy named `evidence/sct/reviewed.sql` in your
 editor. Make these changes only after comparing your source and native target
 catalogs. They describe the tested Hydra v2.2.0 export from SCT build 677.
 
-1. For the 17 JSON columns listed above, change SCT's `VARCHAR(8000)` to `JSONB`.
+- For the 17 JSON columns listed above, change SCT's `VARCHAR(8000)` to `JSONB`.
    If a default exists, copy that column's actual native PostgreSQL default.
    An array default is `'[]'::jsonb`; an object default is `'{}'::jsonb`.
    MySQL `_utf8mb4` literals and MySQL backslash quoting cannot be pasted into
    PostgreSQL. Leave columns with no default without a default.
-2. For the 12 timestamp columns listed above, replace SCT's
+- For the 12 timestamp columns listed above, replace SCT's
    `DEFAULT 'epoch'::TIMESTAMP` with the verified native `DEFAULT now()`.
    The epoch is a fixed historical instant, not the current time.
-3. Remove each obsolete `WITH (OIDS=FALSE)` table option, retaining the closing
+- Remove each obsolete `WITH (OIDS=FALSE)` table option, retaining the closing
    parenthesis and semicolon. The tested export contained 15 such clauses.
    PostgreSQL 17 does not accept that old table option.
-4. In `hydra_oauth2_flow`, replace the incorrectly escaped `acr` default with
+- In `hydra_oauth2_flow`, replace the incorrectly escaped `acr` default with
    `acr TEXT NOT NULL DEFAULT ''`, preserving the comma if another column follows.
    The native target uses an empty string here.
-5. SCT exported `ADD CONSTRAINT hydra_oauth2_flow_chk null;`. Replace `null`
+- SCT exported `ADD CONSTRAINT hydra_oauth2_flow_chk null;`. Replace `null`
    with the actual equivalent CHECK expression. Inspect the source in MySQL:
 
 ```sql

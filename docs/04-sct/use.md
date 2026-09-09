@@ -1,10 +1,10 @@
 # Explain the schema decisions
 
-1. Find one data type represented differently in MySQL and PostgreSQL. Demonstrate a round-trip comparison using a real synthetic row.
-2. Explain why `schema_migration` should retain target-native history while network data must follow the source.
-3. Find the largest LOB in the source. Explain what would happen if it exceeded the configured DMS limit.
-4. Compare indexes produced by SCT with those produced by Hydra. Which differences affect application lookup behavior?
-5. Explain why `hydra_*` selection can miss a required relationship.
+- Find one data type represented differently in MySQL and PostgreSQL. Demonstrate a round-trip comparison using a real synthetic row.
+- Explain why `schema_migration` should retain target-native history while network data must follow the source.
+- Find the largest LOB in the source. Explain what would happen if it exceeded the configured DMS limit.
+- Compare indexes produced by SCT with those produced by Hydra. Which differences affect application lookup behavior?
+- Explain why `hydra_*` selection can miss a required relationship.
 
 <details markdown="1"><summary>Review hint</summary>
 

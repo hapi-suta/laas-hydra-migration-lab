@@ -296,13 +296,13 @@ Session Manager may report that the forwarding session timed out. Rerun the same
 forwarding command after it exits, then reload the browser. Reconnecting the
 tunnel preserves the portal's existing session; restarting the portal does not.
 
-1. Confirm **Active backend: source**.
-2. Select **Sign in**, choose **Alice**, and continue through consent.
-3. Open **Protected account**. Confirm **Verified by source** and Alice's subject.
-4. Select **Refresh existing token**. Confirm it remains Alice on source.
-5. In a separate private browser window, sign in as **Bob** and refresh once.
-6. Use **Revoke token and sign out** for Bob. Leave Alice's browser open.
-7. Repeat the MySQL token-table counts. Explain which tables are now populated.
+- Confirm **Active backend: source**.
+- Select **Sign in**, choose **Alice**, and continue through consent.
+- Open **Protected account**. Confirm **Verified by source** and Alice's subject.
+- Select **Refresh existing token**. Confirm it remains Alice on source.
+- In a separate private browser window, sign in as **Bob** and refresh once.
+- Use **Revoke token and sign out** for Bob. Leave Alice's browser open.
+- Repeat the MySQL token-table counts. Explain which tables are now populated.
 
 The application generates its own signing keys and token records. Do not copy
 keys or tokens into your report. Retest Alice shortly before cutover because a

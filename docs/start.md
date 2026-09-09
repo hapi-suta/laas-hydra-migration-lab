@@ -61,12 +61,12 @@ someone else's resources to obtain an empty starting point.
 
 ## 1. Sign in and identify the account
 
-1. Open your organization's AWS access portal and select the assigned sandbox
+- Open your organization's AWS access portal and select the assigned sandbox
    account and training role. If it uses direct IAM sign-in, use the account's
    supplied sign-in URL. Never create access keys just to follow this guide.
-2. In the AWS Console's account menu, record the 12-digit account ID.
-3. Select **US East (N. Virginia), us-east-1**.
-4. Keep the account ID and Region in your worksheet. These are the values you will check before creating resources.
+- In the AWS Console's account menu, record the 12-digit account ID.
+- Select **US East (N. Virginia), us-east-1**.
+- Keep the account ID and Region in your worksheet. These are the values you will check before creating resources.
 
 <details class="instructions" markdown="1">
 <summary>CLI alternative: verify the same account in CloudShell</summary>

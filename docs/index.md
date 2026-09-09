@@ -73,12 +73,12 @@ Each task explains **where to work, what to do, why you are doing it, and what
 to expect**. Stop at each check. A green AWS status alone does not prove that the
 application works.
 
-1. [Build the source and target](lab/01-build.md).
-2. [Restore data and run Hydra](lab/02-restore.md).
-3. [Assess the schema with SCT](lab/03-sct.md).
-4. [Migrate with DMS and watch live changes](lab/04-dms.md).
-5. [Cut over to RDS PostgreSQL](lab/05-cutover.md).
-6. [Prove the app works and clean up](lab/06-prove.md).
+- [Build the source and target](lab/01-build.md).
+- [Restore data and run Hydra](lab/02-restore.md).
+- [Assess the schema with SCT](lab/03-sct.md).
+- [Migrate with DMS and watch live changes](lab/04-dms.md).
+- [Cut over to RDS PostgreSQL](lab/05-cutover.md).
+- [Prove the app works and clean up](lab/06-prove.md).
 
 Start with [Before you begin](start.md), then task 1. Keep [your worksheet](worksheet.md)
 beside you. Save your own resource IDs and results as you go.

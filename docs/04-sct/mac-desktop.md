@@ -20,14 +20,14 @@ will open its desktop through Session Manager; leave its inbound rules empty.
 
 ## 1. Prepare your Mac
 
-1. Confirm the [Mac CLI and plugin checks](../workstation.md) passed.
-2. Open the **Mac App Store**, find **Windows App** published by Microsoft, and
+- Confirm the [Mac CLI and plugin checks](../workstation.md) passed.
+- Open the **Mac App Store**, find **Windows App** published by Microsoft, and
    install it. Open it and finish or skip the introductory tour. For this lab you
    will add a remote PC, rather than a Microsoft cloud workspace.
-3. In **Finder → Documents**, create a folder named `Hydra-SCT-evidence`.
+- In **Finder → Documents**, create a folder named `Hydra-SCT-evidence`.
    This folder will receive your assessment, SQL and screenshots. Keep passwords
    and the EC2 private key outside it.
-4. Keep your AWS Console open in the assigned account and **us-east-1**.
+- Keep your AWS Console open in the assigned account and **us-east-1**.
 
 [Microsoft's Mac remote-PC instructions](https://learn.microsoft.com/en-us/windows-app/get-started-connect-devices-desktops-apps).
 
@@ -39,30 +39,30 @@ choose one route.
 <details class="instructions" markdown="1" open>
 <summary>AWS Console: create your Windows SCT instance</summary>
 
-1. Open **EC2 → Instances**, select your **Linux runner**, and record its subnet
+- Open **EC2 → Instances**, select your **Linux runner**, and record its subnet
    ID, security-group ID and IAM role from its details. These are resources from
    your own task 1. You will reuse them, while leaving the runner running.
-2. Choose **Launch instances**. Name the new computer with your prefix plus
+- Choose **Launch instances**. Name the new computer with your prefix plus
    `-sct`, for example `comcast-student-01-sct`.
-3. In the image selector, choose the Amazon-provided **Microsoft Windows Server
+- In the image selector, choose the Amazon-provided **Microsoft Windows Server
    2022 Base**, **64-bit x86**, with the full desktop. Choose the Base image;
    the Server Core image has no normal desktop. SQL Server is not needed here.
-4. Choose **t3.large**. This lab uses 8 GiB of memory for the desktop and SCT.
-5. Under **Key pair**, choose **Create new key pair**. Name it with your prefix
+- Choose **t3.large**. This lab uses 8 GiB of memory for the desktop and SCT.
+- Under **Key pair**, choose **Create new key pair**. Name it with your prefix
    plus `-sct-key`, select **RSA** and **.pem**, then create it. Save the downloaded
    PEM privately on your Mac. AWS uses this key to decrypt the initial Windows
    password. Record its path; never paste its contents into lab evidence.
-6. In **Network settings → Edit**, choose your source VPC and the same
+- In **Network settings → Edit**, choose your source VPC and the same
    `runner-public` subnet as the Linux runner. Enable the public IP for outbound
    downloads and SSM access. Select **existing security group** and choose the
    runner group. Remove any automatically selected new group or inbound RDP rule.
-7. Set the root disk to **60 GiB gp3**, encrypted, with **Delete on termination**
+- Set the root disk to **60 GiB gp3**, encrypted, with **Delete on termination**
    enabled. Record the resulting volume ID after launch.
-8. Under **Advanced details**, select the same IAM instance profile as the Linux
+- Under **Advanced details**, select the same IAM instance profile as the Linux
    runner. In this guide it grants `AmazonSSMManagedInstanceCore`. Require IMDSv2.
    Leave user data empty so you can install SCT yourself.
-9. Add your `Project` and `Owner` tags to the instance and its volume. Launch.
-10. Wait for **Running** and passing status checks. Select the instance and open
+- Add your `Project` and `Owner` tags to the instance and its volume. Launch.
+- Wait for **Running** and passing status checks. Select the instance and open
     **Connect → Session Manager**. Require that a connection is available. This
     proves the Windows computer has registered with Systems Manager.
 
@@ -150,11 +150,11 @@ key-pair and root-volume IDs. Continue with the common connection steps below.
 
 ## 3. Retrieve the Windows password in the AWS Console
 
-1. Select **your SCT Windows instance**, choose **Connect**, then **RDP client**.
-2. Choose **Get password**. If AWS says it is not ready, wait and retry.
-3. Choose your saved SCT `.pem` file, then **Decrypt password**. This must be the
+- Select **your SCT Windows instance**, choose **Connect**, then **RDP client**.
+- Choose **Get password**. If AWS says it is not ready, wait and retry.
+- Choose your saved SCT `.pem` file, then **Decrypt password**. This must be the
    key selected for this Windows instance, not a key for another computer.
-4. Keep the username **Administrator** and the resulting password private.
+- Keep the username **Administrator** and the resulting password private.
    You will enter them in Windows App. Do not save them in the shared worksheet.
 
 [AWS Windows password retrieval](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connect-rdp.html).
@@ -207,21 +207,21 @@ If the connection later times out, reopen it and reconnect Windows App.
 
 ## 5. Open Windows App on your Mac
 
-1. In **Windows App → Devices**, choose **+ → Add PC**.
-2. Set **PC name** to `127.0.0.1:13389`. Give it a friendly name such as
+- In **Windows App → Devices**, choose **+ → Add PC**.
+- Set **PC name** to `127.0.0.1:13389`. Give it a friendly name such as
    `Comcast SCT lab`. Leave the gateway unset; the Terminal session is the path.
-3. Save it. Edit this PC's settings and open **Folders**. Enable folder
+- Save it. Edit this PC's settings and open **Folders**. Enable folder
    redirection and add only your Mac's `Documents/Hydra-SCT-evidence` folder.
    Allow writing so SCT reports can be copied back. In **Devices & Audio**,
    allow the clipboard if you want to copy certificate text between computers.
-4. Save the settings and double-click your new PC. Enter **Administrator** and
+- Save the settings and double-click your new PC. Enter **Administrator** and
    the password you decrypted. Use the local Windows account, not your AWS SSO
    username or Mac password.
-5. If a certificate prompt appears, inspect its SHA-1 fingerprint. In the AWS
+- If a certificate prompt appears, inspect its SHA-1 fingerprint. In the AWS
    Console, select the Windows instance and open **Actions → Monitor and
    troubleshoot → Get system log**. Compare it with `RDPCERTIFICATE-THUMBPRINT`.
    Continue only when they match. If the log has not appeared, wait and retry.
-6. Wait for the Windows desktop. Open **File Explorer → This PC** and find the
+- Wait for the Windows desktop. Open **File Explorer → This PC** and find the
    redirected Mac evidence folder under the network locations. Create a small
    text file there and check that it appears in your Mac's Finder folder.
 
@@ -280,12 +280,12 @@ instance, wait for checks and SSM, and repeat steps 4-5 with the same instance I
 
 When SCT practice and evidence export are finished:
 
-1. Open the exported files on your Mac and confirm they are readable.
-2. In EC2, verify the SCT instance's name and ID against your worksheet.
-3. Choose **Instance state → Terminate instance** and confirm that instance.
-4. In **EC2 → Volumes**, check that its recorded root disk was deleted. Record any
+- Open the exported files on your Mac and confirm they are readable.
+- In EC2, verify the SCT instance's name and ID against your worksheet.
+- Choose **Instance state → Terminate instance** and confirm that instance.
+- In **EC2 → Volumes**, check that its recorded root disk was deleted. Record any
    deliberately retained disk or snapshot. Leave the Linux runner running.
-5. In **EC2 → Key pairs**, delete this SCT-only key pair when no instance uses it.
+- In **EC2 → Key pairs**, delete this SCT-only key pair when no instance uses it.
    Remove its private PEM and temporary password copies from your Mac when no
    longer needed. Keep your reports.
 
